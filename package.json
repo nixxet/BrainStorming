@@ -1,0 +1,27 @@
+{
+  "name": "brainstorming",
+  "version": "0.1.0",
+  "description": "Evidence-gated research pipeline and markdown knowledge base for evaluating technical tools and frameworks.",
+  "license": "MIT",
+  "private": false,
+  "scripts": {
+    "regenerate-index": "node scripts/regenerate-index.js",
+    "regenerate-index-dry": "node scripts/regenerate-index.js --dry-run",
+    "validate-pipeline-state": "node scripts/validate-pipeline-state.js",
+    "validate-pipeline-state:write": "node scripts/validate-pipeline-state.js --write",
+    "bench-report": "node scripts/bench-report.js",
+    "verify-citations": "node scripts/verify-citations.js",
+    "verify-citations:all": "node scripts/verify-citations.js --all",
+    "check-staleness": "node scripts/check-staleness.js",
+    "check-staleness:report": "node scripts/check-staleness.js --write",
+    "bench-diff": "node scripts/bench-diff.js",
+    "bench-diff:list": "node scripts/bench-diff.js --list",
+    "topic-init": "node scripts/topic-init.js",
+    "topic-init:dry": "node scripts/topic-init.js --dry-run",
+    "archive-topic": "node scripts/archive-topic.js",
+    "archive-topic:list": "node scripts/archive-topic.js list",
+    "topic-validate": "node scripts/topic-validate.js",
+    "topic-validate:all": "node scripts/topic-validate.js --all",
+    "pipeline-preflight": "node scripts/pipeline-preflight.js"
+  }
+}

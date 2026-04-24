@@ -1,0 +1,8 @@
+# ── Old / superseded research ─────────────────────────────────────────────────
+_archive/
+
+# ── Audit / sentinel reports (generated output, not source) ──────────────────
+_sentinal-report/
+
+# ── Certs ─────────────────────────────────────────────────────────────────────
+CERTS/
