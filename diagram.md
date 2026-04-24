@@ -135,11 +135,11 @@ sequenceDiagram
     WR-->>D: draft-overview · notes · verdict
     D->>CR: Phase 4 — quality gate
     CR-->>D: scorecard.md  PASS ≥ 8.0
-    par Phase 5+6 — parallel when security required
-        D->>SR: Phase 5 — audit recommendations
-        D->>TE: Phase 6 — stress test
+    opt Phase 5 — security required
+        D->>SR: audit recommendations
+        SR-->>D: security-review.md  PASS
     end
-    SR-->>D: security-review.md  PASS
+    D->>TE: Phase 6 — stress test
     TE-->>D: stress-test.md  PASS / COND
     D->>CH: Phase 6.5 — adversarial challenge
     CH-->>D: challenge.md  STANDS
