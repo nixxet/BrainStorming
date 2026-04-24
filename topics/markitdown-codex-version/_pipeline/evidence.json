@@ -1,0 +1,101 @@
+{
+  "topic_slug": "markitdown-codex-version",
+  "created": "2026-04-24",
+  "sources": [
+    {
+      "id": "github-repo",
+      "url": "https://github.com/microsoft/markitdown",
+      "type": "primary",
+      "publisher": "Microsoft",
+      "claims_supported": ["tool-purpose", "supported-formats", "security-io", "repository-activity", "license"]
+    },
+    {
+      "id": "readme-raw",
+      "url": "https://raw.githubusercontent.com/microsoft/markitdown/main/README.md",
+      "type": "primary",
+      "publisher": "Microsoft",
+      "claims_supported": ["tool-purpose", "supported-formats", "installation", "security-io"]
+    },
+    {
+      "id": "pypi",
+      "url": "https://pypi.org/project/markitdown/",
+      "type": "registry",
+      "publisher": "Python Package Index",
+      "claims_supported": ["version", "release-date", "python-version", "license", "extras"]
+    },
+    {
+      "id": "pyproject",
+      "url": "https://raw.githubusercontent.com/microsoft/markitdown/main/packages/markitdown/pyproject.toml",
+      "type": "primary",
+      "publisher": "Microsoft",
+      "claims_supported": ["beta-classifier", "dependencies", "optional-extras"]
+    },
+    {
+      "id": "mcp-readme",
+      "url": "https://raw.githubusercontent.com/microsoft/markitdown/main/packages/markitdown-mcp/README.md",
+      "type": "primary",
+      "publisher": "Microsoft",
+      "claims_supported": ["mcp-tool", "uri-schemes"]
+    },
+    {
+      "id": "security",
+      "url": "https://github.com/microsoft/markitdown/blob/main/SECURITY.md",
+      "type": "primary",
+      "publisher": "Microsoft",
+      "claims_supported": ["security-reporting"]
+    },
+    {
+      "id": "releases",
+      "url": "https://github.com/microsoft/markitdown/releases",
+      "type": "primary",
+      "publisher": "Microsoft",
+      "claims_supported": ["latest-release", "release-changes"]
+    }
+  ],
+  "findings": [
+    {
+      "id": "tool-purpose",
+      "claim": "MarkItDown converts many file and document types to Markdown for LLM and text-analysis pipelines.",
+      "confidence": "HIGH",
+      "source_ids": ["github-repo", "readme-raw"],
+      "must_survive": true
+    },
+    {
+      "id": "runtime-license",
+      "claim": "MarkItDown requires Python >=3.10 and is MIT licensed.",
+      "confidence": "HIGH",
+      "source_ids": ["github-repo", "pypi", "pyproject"],
+      "must_survive": true
+    },
+    {
+      "id": "latest-release",
+      "claim": "Latest observed release is 0.1.5, released 2026-02-20.",
+      "confidence": "HIGH",
+      "source_ids": ["pypi", "releases"],
+      "must_survive": true
+    },
+    {
+      "id": "maturity",
+      "claim": "The project should be treated as still maturing because metadata classifies it as Beta and release notes continue to adjust extraction behavior.",
+      "confidence": "MEDIUM",
+      "source_ids": ["pyproject", "releases"],
+      "must_survive": true
+    },
+    {
+      "id": "security-io",
+      "claim": "Production use with untrusted input requires containment because MarkItDown can perform process-privileged I/O.",
+      "confidence": "HIGH",
+      "source_ids": ["github-repo", "readme-raw", "mcp-readme"],
+      "must_survive": true
+    }
+  ],
+  "metrics": {
+    "source_count": 7,
+    "source_domain_count": 3,
+    "contradiction_count": 0,
+    "critical_gap_count": 0,
+    "significant_gap_count": 2,
+    "minor_gap_count": 2,
+    "must_survive_caveat_count": 4
+  }
+}

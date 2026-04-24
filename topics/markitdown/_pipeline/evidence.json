@@ -1,0 +1,460 @@
+{
+  "topic_slug": "markitdown",
+  "generated_on": "2026-04-24",
+  "workflow": "evaluate",
+  "finding_count": 18,
+  "contradiction_count": 3,
+  "confidence_distribution": {
+    "HIGH": 13,
+    "MEDIUM": 5,
+    "LOW": 2,
+    "UNVERIFIED": 1
+  },
+  "metrics": {
+    "contradiction_count": 3,
+    "critical_gap_count": 1,
+    "significant_gap_count": 5,
+    "minor_gap_count": 2,
+    "must_survive_count": 6,
+    "cross_source_corroboration_rate": 0.72,
+    "single_source_findings": 3
+  },
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Speed-Optimized, Multi-Format Batch Converter",
+      "confidence": "HIGH",
+      "summary": "MarkItDown achieves 35–60 files/sec throughput, 100x faster than Docling, 3x faster than Unstructured. Supports 29+ file formats (PDF, Office, HTML, images, audio, URLs). MIT-licensed, v0.1.5 released Feb 2026.",
+      "source_count": 4,
+      "source_independence": "independent",
+      "must_survive": true,
+      "appears_in": ["overview", "notes", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If speed advantage erodes due to core algorithm changes or if format breadth no longer differentiates.",
+      "confidence_decay": "slow",
+      "decay_rationale": "Benchmarks stable 2025–2026; 0.x versioning may change algorithm.",
+      "recommendation_role": "core",
+      "staleness_material": true
+    },
+    {
+      "id": "F2",
+      "title": "Explicit Design for LLM/RAG Output, Not Publication Fidelity",
+      "confidence": "HIGH",
+      "summary": "MarkItDown architecture targets semantic Markdown (headings, paragraphs, lists) for LLM consumption, not pixel-perfect publication. v0.1.5 adds optional vision-model OCR (GPT-4o, Claude, Azure DI).",
+      "source_count": 3,
+      "source_independence": "independent",
+      "must_survive": true,
+      "appears_in": ["overview", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If design goals shift toward publication-grade output or if marketing claims change.",
+      "confidence_decay": "stable",
+      "decay_rationale": "Design philosophy unlikely to change; foundational architecture.",
+      "recommendation_role": "core",
+      "staleness_material": false
+    },
+    {
+      "id": "F3",
+      "title": "Overall Accuracy ~47.3%; Format-Specific Failures",
+      "confidence": "HIGH",
+      "summary": "Quantitative benchmarks across 94 real-world documents show 47.3% overall success rate (ChatForest), 25% PDF, 15% OCR. DEV Community benchmark confirms performance degradation >10MB complexity.",
+      "source_count": 3,
+      "source_independence": "independent",
+      "must_survive": true,
+      "appears_in": ["overview", "notes", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If baseline accuracy improves significantly (>70%) or if core algorithm changes.",
+      "confidence_decay": "slow",
+      "decay_rationale": "Benchmarks 2025–2026; stable unless major algorithm changes.",
+      "recommendation_role": "core",
+      "staleness_material": true
+    },
+    {
+      "id": "F4",
+      "title": "Table & Structure Preservation Failure is Architectural",
+      "confidence": "HIGH",
+      "summary": "MarkItDown fundamentally fails to preserve tables and document layout. Systenics real-world test: extracts table columns separately ('one column at a time'), destroying row-column correlation. GitHub issue #41 open since 2024, no assignee.",
+      "source_count": 2,
+      "source_independence": "independent",
+      "must_survive": true,
+      "appears_in": ["overview", "notes", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If MarkItDown implements table-aware extraction (architectural change required).",
+      "confidence_decay": "stable",
+      "decay_rationale": "Architectural limitation unlikely to change without rewrite.",
+      "recommendation_role": "core",
+      "staleness_material": false
+    },
+    {
+      "id": "F5",
+      "title": "Text Line Handling Breaks on Unstructured PDFs",
+      "confidence": "HIGH",
+      "summary": "PDFs without structural metadata exhibit line-breaking failures. Example: 'Customer Id : 43416064' split across 3 separate lines during extraction, making post-processing difficult.",
+      "source_count": 1,
+      "source_independence": "single-source",
+      "must_survive": false,
+      "appears_in": ["notes"],
+      "transferability": "reusable",
+      "invalidation_condition": "If PDF text layer detection improves in future versions.",
+      "confidence_decay": "slow",
+      "decay_rationale": "Depends on PDF structure analysis; stable unless core parser changes.",
+      "recommendation_role": "supporting",
+      "staleness_material": false
+    },
+    {
+      "id": "F6",
+      "title": "Document Complexity Threshold ~10MB",
+      "confidence": "MEDIUM",
+      "summary": "DEV Community benchmark indicates performance degrades sharply on documents >10MB or complex layouts. Exact threshold varies with document structure; requires empirical validation per corpus.",
+      "source_count": 1,
+      "source_independence": "single-source",
+      "must_survive": false,
+      "appears_in": ["notes"],
+      "transferability": "requires-manual-validation",
+      "invalidation_condition": "If hardware constraints change or if core algorithm optimizes for larger documents.",
+      "confidence_decay": "fast",
+      "decay_rationale": "Depends on MarkItDown version and document corpus composition.",
+      "recommendation_role": "supporting",
+      "staleness_material": false
+    },
+    {
+      "id": "F7",
+      "title": "CVE-2025-11849 (Mammoth Dependency): Directory Traversal, CVSS 9.3",
+      "confidence": "HIGH",
+      "summary": "MarkItDown depends on mammoth for DOCX conversion. CVE-2025-11849 (CVSS 9.3) affected mammoth v0.3.25–1.10.x: untrusted DOCX with external image links could read arbitrary files (/etc/passwd) or cause DoS. Fixed in mammoth 1.11.0. MarkItDown v0.1.4+ pins mammoth ≥1.11.0.",
+      "source_count": 3,
+      "source_independence": "independent",
+      "must_survive": true,
+      "appears_in": ["notes", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If MarkItDown downgrades or unpins mammoth version.",
+      "confidence_decay": "slow",
+      "decay_rationale": "CVE status fixed; risk persists only in older versions.",
+      "recommendation_role": "core",
+      "staleness_material": true
+    },
+    {
+      "id": "F8",
+      "title": "XXE Vulnerability in XML Parsing (Fixed v0.1.2+)",
+      "confidence": "HIGH",
+      "summary": "MarkItDown had XXE (XML External Entity) vulnerability in DOCX/XLSX/PPTX processing. Fixed v0.1.2 (May 2024) by switching from minidom to defusedxml. Responsible fix; indicates file parsing as persistent risk area.",
+      "source_count": 2,
+      "source_independence": "independent",
+      "must_survive": true,
+      "appears_in": ["notes"],
+      "transferability": "reusable",
+      "invalidation_condition": "If defusedxml is downgraded or XML parsing is bypassed.",
+      "confidence_decay": "slow",
+      "decay_rationale": "Fix is stable; risk is historical unless regression occurs.",
+      "recommendation_role": "supporting",
+      "staleness_material": false
+    },
+    {
+      "id": "F9",
+      "title": "MCP Exposure to Untrusted URIs (SSRF Risk)",
+      "confidence": "MEDIUM",
+      "summary": "MarkItDown MCP server exposes convert_to_markdown(uri) without built-in URI scheme validation. BlueRock research: 36.7% of 7,000+ MCP servers have SSRF vulnerabilities. MarkItDown MCP can read local files (file://) or trigger SSRF (https:// to metadata services). Risk is in MCP implementation, NOT in Python library itself.",
+      "source_count": 2,
+      "source_independence": "independent",
+      "must_survive": true,
+      "appears_in": ["notes", "verdict"],
+      "transferability": "source-domain-only",
+      "invalidation_condition": "If MCP server adds URI validation upstream or restricts URI schemes.",
+      "confidence_decay": "fast",
+      "decay_rationale": "Depends on MCP deployment configuration; can be remediated quickly.",
+      "recommendation_role": "supporting",
+      "staleness_material": true
+    },
+    {
+      "id": "F10",
+      "title": "Dependency Supply Chain: 25 Dependencies, CVE Surface Area",
+      "confidence": "HIGH",
+      "summary": "Installing markitdown[all] pulls 251MB and 25 dependencies (pdfminer.six, mammoth, lxml, pandas, azure-ai-documentintelligence, etc.). CVE-2025-11849 in mammoth is recent example. Regular scanning required. Footprint bloat for containerized pipelines.",
+      "source_count": 1,
+      "source_independence": "single-source",
+      "must_survive": true,
+      "appears_in": ["notes", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If [all] install is deprecated or dependencies are consolidated.",
+      "confidence_decay": "slow",
+      "decay_rationale": "Dependency count stable unless major refactor.",
+      "recommendation_role": "supporting",
+      "staleness_material": true
+    },
+    {
+      "id": "F11",
+      "title": "Plugin Security Model (Arbitrary Python Code, Default Disabled)",
+      "confidence": "MEDIUM",
+      "summary": "MarkItDown v0.1.0+ introduced plugin architecture. Plugins are arbitrary Python code; disabled by default. Security implications of enabling untrusted plugins not formally documented by Microsoft.",
+      "source_count": 1,
+      "source_independence": "single-source",
+      "must_survive": false,
+      "appears_in": ["notes"],
+      "transferability": "source-domain-only",
+      "invalidation_condition": "If plugin documentation is published or sandboxing is implemented.",
+      "confidence_decay": "stable",
+      "decay_rationale": "Plugin architecture unlikely to change fundamentally.",
+      "recommendation_role": "contextual",
+      "staleness_material": false
+    },
+    {
+      "id": "F12",
+      "title": "Heading-Aware Chunking in RAG Pipelines (40–60% Accuracy Boost)",
+      "confidence": "LOW",
+      "summary": "Frank's World blog claims heading-aware Markdown chunking (split at H2/H3 boundaries, preserve metadata) boosts RAG retrieval accuracy 40–60% vs. naive splitting. No methodology disclosed; no independent corroboration.",
+      "source_count": 1,
+      "source_independence": "single-source",
+      "must_survive": false,
+      "appears_in": ["notes"],
+      "transferability": "requires-manual-validation",
+      "invalidation_condition": "If independent study validates or contradicts claim.",
+      "confidence_decay": "fast",
+      "decay_rationale": "Unsupported claim; requires validation.",
+      "recommendation_role": "contextual",
+      "staleness_material": false
+    },
+    {
+      "id": "F13",
+      "title": "Error-Handling Chains & Fallback Strategies",
+      "confidence": "MEDIUM",
+      "summary": "Best-practice RAG integration uses fallback chains: MarkItDown → Azure Document Intelligence / Docling → text extraction. Pattern amortizes speed advantage while catching edge cases. Mentioned by multiple integration tutorials; no formal benchmarks on fallback overhead.",
+      "source_count": 2,
+      "source_independence": "independent",
+      "must_survive": false,
+      "appears_in": ["overview", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If fallback overhead becomes prohibitive due to latency/cost constraints.",
+      "confidence_decay": "slow",
+      "decay_rationale": "Pattern is foundational; stable unless tool alternatives change.",
+      "recommendation_role": "supporting",
+      "staleness_material": false
+    },
+    {
+      "id": "F14",
+      "title": "Docling: 97.9% Table Accuracy, Slower, Heavier",
+      "confidence": "HIGH",
+      "summary": "Docling (open-source, AI-powered layout analysis) achieves 97.9% table cell accuracy via deep learning. Trade-off: 6.28s per page (~65s per 50-page doc), 1,032MB installation, 88 dependencies. Preferred for complex PDFs, scientific papers, financial reports.",
+      "source_count": 3,
+      "source_independence": "independent",
+      "must_survive": false,
+      "appears_in": ["overview", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If Docling's accuracy or performance changes materially.",
+      "confidence_decay": "slow",
+      "decay_rationale": "Benchmarks stable 2025–2026.",
+      "recommendation_role": "supporting",
+      "staleness_material": false
+    },
+    {
+      "id": "F15",
+      "title": "Unstructured: Enterprise-Grade, 88%+ Reliability, Hybrid SaaS/Self-Hosted",
+      "confidence": "MEDIUM",
+      "summary": "Unstructured is enterprise document processing platform with 88%+ reliability, OCR and NLP models, API-based or open-source self-hosted. Bridges SaaS and self-hosted models; offers support contracts. Slower than MarkItDown; more reliable.",
+      "source_count": 2,
+      "source_independence": "independent",
+      "must_survive": false,
+      "appears_in": ["verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If Unstructured's pricing or support model changes.",
+      "confidence_decay": "fast",
+      "decay_rationale": "SaaS offerings evolve rapidly; pricing and support terms change.",
+      "recommendation_role": "contextual",
+      "staleness_material": false
+    },
+    {
+      "id": "F16",
+      "title": "Marker & MinerU: Academic/Structured Documents",
+      "confidence": "MEDIUM",
+      "summary": "Marker (balanced speed/structure, strong image handling) and MinerU (GPU-accelerated, heading detection, complex tables as HTML, quality approaches commercial tools) excel at academic papers and structured documents. Outperform MarkItDown on scientific/financial content; slower.",
+      "source_count": 1,
+      "source_independence": "single-source",
+      "must_survive": false,
+      "appears_in": ["verdict"],
+      "transferability": "source-domain-only",
+      "invalidation_condition": "If Marker/MinerU performance or availability changes.",
+      "confidence_decay": "fast",
+      "decay_rationale": "Open-source projects; rapid evolution.",
+      "recommendation_role": "contextual",
+      "staleness_material": false
+    },
+    {
+      "id": "F17",
+      "title": "Version 0.1.5 (Feb 2026) Indicates Pre-1.0 API Stability",
+      "confidence": "MEDIUM",
+      "summary": "MarkItDown at v0.1.5. SemVer: 0.x = API instability, expect feature churn. Landscape treats as 'mature'; deep-dive correctly flags as 'PARTIALLY verified — 0.x, expect API churn.' Microsoft frames as open-source research project, not productized with SLA.",
+      "source_count": 2,
+      "source_independence": "independent",
+      "must_survive": true,
+      "appears_in": ["notes", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "If MarkItDown reaches v1.0.0 or if Microsoft offers formal SLA.",
+      "confidence_decay": "slow",
+      "decay_rationale": "SemVer interpretation is stable; invalidated only by major version change.",
+      "recommendation_role": "core",
+      "staleness_material": true
+    },
+    {
+      "id": "F18",
+      "title": "Community Momentum: Active Maintenance, Plugin Ecosystem",
+      "confidence": "HIGH",
+      "summary": "GitHub stats (April 2026): 117K stars, 7.6K forks, 352 issues, 286 PRs. Recent releases (v0.1.3 Aug 2024, v0.1.4 Dec 2024, v0.1.5 Feb 2026). Plugin system (v0.1.0+) enables extensions. Not abandoned; active maintenance.",
+      "source_count": 2,
+      "source_independence": "independent",
+      "must_survive": false,
+      "appears_in": ["overview"],
+      "transferability": "reusable",
+      "invalidation_condition": "If maintenance velocity drops or Microsoft ends support.",
+      "confidence_decay": "fast",
+      "decay_rationale": "Activity levels change quarterly; repo metrics are volatile.",
+      "recommendation_role": "supporting",
+      "staleness_material": false
+    }
+  ],
+  "contradictions_resolved": [
+    {
+      "id": "C1",
+      "title": "Path Traversal Vulnerability (CVE Details)",
+      "landscape_statement": "MarkItDown has 'path traversal vulnerability' (no CVE cited)",
+      "deep_dive_statement": "CVE-2025-11849 in mammoth dependency; directory traversal on untrusted DOCX; CVSS 9.3; fixed in mammoth 1.11.0",
+      "resolution": "Both describe SAME vulnerability. Landscape lacked CVE number; deep-dive provided full context. No contradiction—deep-dive clarified and corroborated.",
+      "merged_finding": "CVE-2025-11849 (mammoth), CVSS 9.3, MarkItDown v0.1.4+ is patched."
+    },
+    {
+      "id": "C2",
+      "title": "'Production-Ready' Claim",
+      "landscape_statement": "Treats MarkItDown as mature, production-ready tool",
+      "deep_dive_statement": "PARTIALLY verified — still 0.x, expect API churn, not production-grade with SLA",
+      "resolution": "Contradiction on terminology, not fact. Landscape is marketing-influenced; deep-dive is SemVer-correct.",
+      "merged_finding": "Stable in practice (active maintenance) but NOT formally production-ready per SemVer. Suitable for internal tools; enterprises need internal support."
+    },
+    {
+      "id": "C3",
+      "title": "Office Format Support Quality",
+      "landscape_statement": "29+ supported formats (implies quality); 'enhanced PDF handling'",
+      "deep_dive_statement": "Office formats 'well' — PARTIALLY verified. Basic only; no structured table/list extraction; issue #41 open since 2024",
+      "resolution": "No contradiction; deep-dive provides accuracy qualification. Both correct on breadth; deep-dive adds quality detail.",
+      "merged_finding": "Supports Office formats as input (DOCX, XLSX, PPTX) but with limited structure preservation. Suitable for simple docs; inadequate for complex layouts."
+    }
+  ],
+  "must_carry_caveats": [
+    {
+      "id": "CV1",
+      "text": "CVE-2025-11849 (mammoth dependency): directory traversal, CVSS 9.3, allows arbitrary file read on untrusted DOCX input. MarkItDown v0.1.4+ pins mammoth ≥1.11.0 (patched). Teams using MarkItDown 0.1.0–0.1.3 with locked old mammoth pins remain exposed.",
+      "reason": "Critical security detail; omission risks vulnerable deployments.",
+      "appears_in": ["notes", "verdict"]
+    },
+    {
+      "id": "CV2",
+      "text": "47.3% accuracy baseline requires fallback validation. Nearly 50% of documents may require fallback processing (Docling, Azure DI, manual review). Do NOT treat 47% as acceptable without fallback chain.",
+      "reason": "Marketing understates failure rate; fallback is operational requirement.",
+      "appears_in": ["overview", "verdict"]
+    },
+    {
+      "id": "CV3",
+      "text": "Table extraction failure is architectural (GitHub issue #41, open since 2024). MarkItDown extracts columns separately, destroying row-column correlation. Not a bug; architectural design. Table-rich documents require Docling or post-processing.",
+      "reason": "Teams discover this late; tempering expectations prevents rework.",
+      "appears_in": ["overview", "notes", "verdict"]
+    },
+    {
+      "id": "CV4",
+      "text": "MarkItDown MCP server (markitdown-mcp) exposes convert_to_markdown(uri) without URI validation. MCP deployments to untrusted clients require URI scheme/path allowlists upstream. Python library (convert_local, convert_response) is safe.",
+      "reason": "MCP security is deployment-specific; omitting confuses library vs. MCP risk.",
+      "appears_in": ["notes", "verdict"]
+    },
+    {
+      "id": "CV5",
+      "text": "Version 0.1.5 (February 2026) indicates 0.x pre-1.0 API stability. Expect feature churn and breaking changes. Microsoft provides no SLA or support guarantee; enterprises should plan internal support.",
+      "reason": "Marketing suggests maturity; SemVer realities manage expectations.",
+      "appears_in": ["notes", "verdict"]
+    },
+    {
+      "id": "CV6",
+      "text": "Frank's World blog claims 40–60% RAG accuracy improvement via heading-aware chunking. No methodology disclosed; no independent corroboration. Do NOT cite without validation.",
+      "reason": "High-confidence-sounding but unsupported claim risks misrepresenting tool capability.",
+      "appears_in": ["notes"]
+    }
+  ],
+  "gaps_critical": [
+    {
+      "id": "G1",
+      "title": "SSRF Allowlists / Rate Limits in MarkItDown URL Fetching",
+      "impact": "If MCP or library exposes convert(url) API, security posture assessment depends on whether built-in allowlists exist.",
+      "status": "UNVERIFIED — investigator searched; no documentation found.",
+      "recommendation": "Contact Microsoft or perform source-code audit."
+    }
+  ],
+  "gaps_significant": [
+    {
+      "id": "G2",
+      "title": "Exact Vision Model Compatibility (OCR Plugin)",
+      "impact": "MarkItDown-OCR lists GPT-4o, Azure OpenAI, 'OpenAI API-compatible.' Claude and open-source models untested.",
+      "status": "Mentioned; no validation.",
+      "recommendation": "Test with target models before deployment."
+    },
+    {
+      "id": "G3",
+      "title": "Multi-Language Evaluation",
+      "impact": "Benchmarks focus on English. Behavior on CJK, RTL, code-heavy documents unknown.",
+      "status": "Noted as gap; no research.",
+      "recommendation": "Validate with representative multilingual corpus."
+    },
+    {
+      "id": "G4",
+      "title": "Performance Data on Complex Mixed Documents",
+      "impact": "Benchmarks exist for pure PDF, pure Office, pure HTML. Mixed-format pipelines lack systematic data.",
+      "status": "Acknowledged; no new data.",
+      "recommendation": "Conduct internal benchmarking."
+    },
+    {
+      "id": "G5",
+      "title": "Total Cost of Ownership Analysis",
+      "impact": "No published comparison (speed gains vs. accuracy failures rework) for specific document volumes/SLAs.",
+      "status": "Deep-dive calculates optional costs; no comprehensive TCO model.",
+      "recommendation": "Model against actual corpus."
+    }
+  ],
+  "gaps_minor": [
+    {
+      "id": "G6",
+      "title": "Tested Throughput Limits & Cluster Deployment",
+      "impact": "No documented max files/sec, memory per doc, cluster guidance.",
+      "status": "Neither researcher tested.",
+      "recommendation": "Validate in target environment."
+    },
+    {
+      "id": "G7",
+      "title": "Maintenance Velocity Metrics",
+      "impact": "352 issues, 286 PRs; unclear active vs. stale. Commit frequency not quantified.",
+      "status": "Activity noted; no velocity analysis.",
+      "recommendation": "Query GitHub API for commit frequency."
+    }
+  ],
+  "invalidation_conditions": [
+    "If accuracy requirements increase from ~47% to >80%, recommend Docling/Unstructured.",
+    "If corpus becomes table-heavy without fallback, recommend Docling or MinerU.",
+    "If untrusted input cannot be validated, recommend Unstructured or Docling.",
+    "If future MarkItDown release unpins or downgrades mammoth, re-assess CVE-2025-11849 exposure.",
+    "If defusedxml is downgraded or XML parsing bypassed, re-audit XXE risk.",
+    "If MCP must serve multi-tenant/untrusted clients without upstream validation, use narrow APIs or isolate.",
+    "If Azure DI or LLM API costs spike, fallback chain economics may favor Docling.",
+    "If corpus documents regularly exceed 10MB with complex layouts, empirical testing required.",
+    "If multilingual support needed, validate with CJK/RTL/code-heavy corpus.",
+    "If enterprise SLA required, MarkItDown's 0.x stability and lack of support guarantee are blockers."
+  ],
+  "staleness_summary": {
+    "material_findings": [
+      "F1 (Speed benchmark: 35–60 files/sec)",
+      "F3 (Accuracy baseline: 47.3%)",
+      "F7 (CVE-2025-11849 status)",
+      "F9 (MCP SSRF risk)",
+      "F10 (Dependency supply chain)",
+      "F17 (0.x API stability)"
+    ],
+    "fastest_material_decay": "F9 (MCP SSRF) — fast (6 months) — deployment-specific; can be remediated quickly.",
+    "core_findings": [
+      "F1, F2, F3, F4, F7, F17 — core to recommendation"
+    ],
+    "volatile_findings": [
+      "F12 (Unverified 40–60% RAG claim) — volatile (90 days) — undated and unsupported."
+    ]
+  }
+}

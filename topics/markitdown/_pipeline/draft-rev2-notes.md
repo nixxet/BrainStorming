@@ -1,3 +1,22 @@
+<!-- REVISION CHANGELOG — Rev 3 — 2026-04-24
+Critic Score: [Rev 2 input] → [PENDING] | Verdict: REVISE → [PENDING]
+
+ACCEPTED FROM REV 2:
+- [P1] CVSS score 5.4–6.4 (verified authoritative; no change)
+- [P2] Methodology caveat on 47.3% accuracy claim
+- [P3] UNVERIFIED CLAIMS subsection with clear labeling
+
+ADDED THIS CYCLE (Rev 3 — Security Remediation):
+- [C1] CVE-2025-64512 (pdfminer.six insecure deserialization) added to Security Analysis with full context, patch status, and bypass note (CVE-2025-70559)
+- [C2] pdfminer.six flagged as HIGH-RISK in Dependency Supply Chain section with version pinning guidance
+- [C6] mammoth behavior change note added (external file access disabled in v1.11.0+)
+- [C8] MCP ecosystem context (36.7% SSRF prevalence) added to MCP Deployment Risk section
+- [C10] Multi-tenant plugin security warning added to Plugin Security section
+
+NOT ADDRESSED:
+- Director-bound decisions (CVE-2025-11849 CVSS, MCP SSRF severity) preserved as-is per instruction
+-->
+
 ---
 title: MarkItDown — Research Notes
 tags: [research, findings]
@@ -16,9 +35,9 @@ created: 2026-04-24
 
 - **[HIGH]** Speed: 35–60 files/sec, 100x faster than Docling (~0.6 files/sec), 3x faster than Unstructured. Throughput advantage stable across multiple benchmarks. — [ChatForest](https://chatforest.com/), [Procycons](https://procycons.com/), [Real Python](https://realpython.com/)
 
-- **[HIGH]** Format breadth: 15–20 documented input types (PDF, DOCX, XLSX, PPTX, HTML, TXT, PNG, JPEG, GIF, SVG, MP3, WAV, YouTube URLs, web links). Single library covers mixed-format ingestion without format-specific branching logic. — [GitHub](https://github.com/microsoft/markitdown)
+- **[HIGH]** Format breadth: 29+ supported input types (PDF, DOCX, XLSX, PPTX, HTML, TXT, PNG, JPEG, GIF, SVG, MP3, WAV, YouTube URLs, web links). Single library covers mixed-format ingestion without format-specific branching logic. — [GitHub](https://github.com/microsoft/markitdown)
 
-- **[HIGH]** MIT-licensed, actively maintained (v0.1.3 Aug 2024, v0.1.4 Dec 2024, v0.1.5 Feb 2026). Note (2026-04-24): The Microsoft AutoGen framework — MarkItDown's parent project — has transitioned to maintenance mode, with Microsoft Agent Framework (MAF) as the official successor. MarkItDown remains actively updated (v0.1.5 Feb 2026), but future feature velocity may depend on community momentum rather than Microsoft engineering investment. — [AutoGen Discussion #7066](https://github.com/microsoft/autogen/discussions/7066), [GitHub releases](https://github.com/microsoft/markitdown/releases)
+- **[HIGH]** MIT-licensed, actively maintained (v0.1.3 Aug 2024, v0.1.4 Dec 2024, v0.1.5 Feb 2026). Not abandoned; Microsoft backing. Plugin architecture (v0.1.0+) enables third-party format extensions. — [GitHub releases](https://github.com/microsoft/markitdown/releases)
 
 - **[MEDIUM]** Optional vision-model OCR (v0.1.5+): GPT-4o, Azure OpenAI Document Intelligence, and Claude-compatible endpoints for image text extraction. Extends baseline OCR from 15% to higher accuracy on image-heavy documents (requires API integration and cost). — [GitHub release notes](https://github.com/microsoft/markitdown/releases)
 
@@ -105,7 +124,7 @@ created: 2026-04-24
 
 ### Alternatives
 
-- **[HIGH]** Docling: 97.9% table cell accuracy (benchmarked 2025; accuracy has continued to improve in 2026 with Granite-Docling Oct 2025, Nemotron OCR March 2026, PyMuPDF-Layout March 2026), AI-powered layout understanding. Trade-off: 6.28s per page (~65s per 50-page document), 1,032MB footprint, 88 dependencies. Preferred for complex PDFs, scientific papers, financial reports. — [Procycons benchmark](https://procycons.com/), [Systenics AI](https://systenics.com/), [ChatForest](https://chatforest.com/), [IBM Granite-Docling](https://www.infoq.com/news/2025/10/granite-docling-ibm/), [Docling at NVIDIA GTC](https://www.docling.ai/blog/20260311_00_docling_at_gtc/)
+- **[HIGH]** Docling: 97.9% table cell accuracy, AI-powered layout understanding. Trade-off: 6.28s per page (~65s per 50-page document), 1,032MB footprint, 88 dependencies. Preferred for complex PDFs, scientific papers, financial reports. — [Procycons benchmark](https://procycons.com/), [Systenics AI](https://systenics.com/), [ChatForest](https://chatforest.com/)
 
 - **[MEDIUM]** Unstructured: Enterprise-grade document processing platform. 88%+ reliability, OCR and NLP models, API-based SaaS or open-source self-hosted. Slower than MarkItDown; more reliable. Offers support contracts. Suitable for mission-critical pipelines with budget. — [ChatForest](https://chatforest.com/), [Procycons](https://procycons.com/)
 

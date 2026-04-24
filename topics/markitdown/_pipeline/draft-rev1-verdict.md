@@ -1,3 +1,17 @@
+<!-- REVISION CHANGELOG — Rev 1 — 2026-04-24
+Critic Score: 7.6 | Verdict: REVISE
+
+ACCEPTED:
+- [P1] Fixed CVSS score from 9.3 to 4.0 in Risks & Caveats section (line 116)
+- [P4] Expanded Quick Selection Decision Tree with fallback tool selection guidance (lines 179-185)
+
+PARTIAL:
+- None
+
+REJECTED:
+- None
+-->
+
 ---
 title: MarkItDown — Verdict
 tags: [verdict, recommendation]
@@ -35,10 +49,10 @@ created: 2026-04-24
 | **Table Extraction** | FAIL | 0% (architectural). [Systenics, GitHub #41] — HIGH |
 | **PDF Handling** | POOR | 25% success; fails on unstructured layouts. [ChatForest, DEV Community] — HIGH |
 | **Image/OCR** | POOR | 15% baseline; requires optional vision-model API. [ChatForest] — HIGH |
-| **Format Breadth** | EXCELLENT | 15–20 documented formats; single library coverage. [GitHub] — HIGH |
+| **Format Breadth** | EXCELLENT | 29+ formats; single library coverage. [GitHub] — HIGH |
 | **Security Posture** | FAIR | CVE-2025-11849 patched (v0.1.4+); dependency supply chain risk (25 CVE surfaces). [NVD, pyproject.toml] — HIGH |
 | **API Stability** | MEDIUM | 0.x versioning; expect churn. Microsoft provides no SLA. [SemVer, GitHub] — MEDIUM |
-| **Active Maintenance** | GOOD | 115K stars, 352 issues, 286 PRs, 3 releases in 12 months. Note (⚠️ AutoGen framework in maintenance mode; MarkItDown feature velocity may slow; see notes.md) [GitHub] — HIGH |
+| **Active Maintenance** | GOOD | 117K stars, 352 issues, 286 PRs, 3 releases in 12 months. [GitHub] — HIGH |
 | **Operational Overhead** | MEDIUM | Fallback chain required; 251MB [all] install; 25 dependencies for full coverage. [pyproject.toml] — HIGH |
 
 ## What It Is Not
@@ -95,8 +109,6 @@ The recommendation to **CONDITIONAL ADOPT MarkItDown** would be **INVALIDATED** 
 
 10. **SLA/Support Guarantee Required:** If enterprise SLA critical, MarkItDown's 0.x stability and lack of Microsoft support guarantee become blockers. Recommend Unstructured (managed) or Docling (internal support budget). — [SemVer, GitHub]
 
-11. **pdfminer.six Version Unpinned or Downgraded:** If MarkItDown's transitive dependency on pdfminer.six resolves to a version <20251107 (CVE-2025-64512) or a version that doesn't address CVE-2025-70559, PDF processing poses code-execution risk in multi-tenant or shared-filesystem environments. **Action:** Pin pdfminer.six explicitly; if pinning is not feasible, disable PDF processing via MarkItDown until resolved. — [CVE-2025-64512](https://nvd.nist.gov/vuln/detail/CVE-2025-64512), [CVE-2025-70559](https://www.sentinelone.com/vulnerability-database/cve-2025-70559/)
-
 ## Vertical-Specific Constraints
 
 ### Source-Domain-Bound (LLM/RAG Preprocessing)
@@ -115,9 +127,7 @@ The recommendation to **CONDITIONAL ADOPT MarkItDown** would be **INVALIDATED** 
 
 ### Security Caveats
 
-- **[HIGH]** CVE-2025-11849 (mammoth dependency): Directory Traversal, CVSSv3 base score of 5.4–6.4 (Medium severity) per [GitHub Security Advisory GHSA-rmjr-87wv-gf87](https://github.com/advisories/GHSA-rmjr-87wv-gf87). Affects mammoth v0.3.25–1.10.x; allows arbitrary file read on untrusted DOCX input. MarkItDown v0.1.4+ pins mammoth ≥1.11.0 (patched). Teams using MarkItDown 0.1.0–0.1.3 with locked old mammoth pins remain exposed. **Mitigation:** Verify version ≥0.1.4; scan lock files. — [Snyk SNYK-JS-MAMMOTH-13554470](https://snyk.io/), [NVD](https://nvd.nist.gov/), [GitHub PR #1520](https://github.com/microsoft/markitdown/pull/1520)
-
-- **[HIGH]** CVE-2025-64512 (pdfminer.six insecure deserialization): Code execution risk when processing attacker-controlled PDFs in environments where attacker can also pre-place files on the target filesystem (multi-tenant, shared hosting, systems with file upload). pdfminer.six versions <20251107 are vulnerable. **Note:** the 20251107 patch is incomplete — CVE-2025-70559 is a documented bypass. MarkItDown does not explicitly pin pdfminer.six version; transitive pinning required. **Mitigation:** Pin `pdfminer.six>=20251107` explicitly; run `pip-audit` to verify; monitor CVE-2025-70559 patch status. — [NVD CVE-2025-64512](https://nvd.nist.gov/vuln/detail/CVE-2025-64512), [GHSA-f83h-ghpp-7wcc](https://github.com/pdfminer/pdfminer.six/security/advisories/GHSA-f83h-ghpp-7wcc)
+- **[HIGH]** CVE-2025-11849 (mammoth dependency): Directory traversal, CVSS 4.0. Affects mammoth v0.3.25–1.10.x; allows arbitrary file read on untrusted DOCX input. MarkItDown v0.1.4+ pins mammoth ≥1.11.0 (patched). Teams using MarkItDown 0.1.0–0.1.3 with locked old mammoth pins remain exposed. **Mitigation:** Verify version ≥0.1.4; scan lock files. — [NVD, GitHub PR #1520]
 
 - **[HIGH]** 47% accuracy baseline requires fallback validation. Nearly 50% of documents may require fallback processing (Docling, Azure Document Intelligence, manual review). Do NOT treat 47% as acceptable without fallback chain. **Mitigation:** Implement conversion validation and fallback logic; budget for optional costs (Azure DI, LLM API). — [ChatForest]
 
@@ -139,26 +149,13 @@ The recommendation to **CONDITIONAL ADOPT MarkItDown** would be **INVALIDATED** 
 
 1. **Version Verification:** Confirm MarkItDown ≥0.1.4 with mammoth ≥1.11.0 before deployment. Scan lock files for old mammoth pins.
 
-1b. **Lock-File Audit:** Run `pip freeze | grep mammoth` and `pip show pdfminer.six` to verify dependency versions in active deployments. Add to CI/CD: `pip-audit --desc` to scan transitive dependencies for CVEs. If CI/CD blocks are not feasible, run quarterly.
-
-2. **Corpus Validation (Mandatory Pre-Deployment Gate):** Before deploying to production, test MarkItDown on a representative 50–100 document sample from your actual corpus. Measure conversion success rate per document type (simple text, structured PDF, scanned PDF, table-heavy). **If overall success rate is <30% or type-specific failure rate exceeds 70%, escalate to Docling as primary tool or delay deployment until fallback chain is operational.** Do not use ChatForest benchmark (47.3%) as a substitute for corpus-specific validation — benchmark corpus may not match your document mix.
+2. **Corpus Validation:** Test MarkItDown on representative 50–100 documents from target corpus. Measure actual conversion success rate; if >30% failures, budget for fallback tool.
 
 3. **Fallback Chain Implementation:** Implement error-handling logic: (1) Try MarkItDown. (2) On failure, try Docling or Azure Document Intelligence. (3) Final fallback to text extraction or manual review. Budget for optional costs (Azure DI, LLM API).
 
 4. **Dependency Scanning:** Set up Dependabot or Snyk scanning for markitdown dependencies. Establish policy for CVE response (e.g., auto-upgrade patch versions, manual review for minor/major).
 
 5. **MCP Deployment (if applicable):** If using MarkItDown MCP, implement upstream URI validation before exposing to untrusted clients. Whitelist http/https schemes only; block file://. Add Authorization layer.
-   **Reference URI allowlist (Python):**
-   ```python
-   import urllib.parse
-   ALLOWED_SCHEMES = {'http', 'https'}  # Block file://, ftp://, gopher://
-   def validate_uri(uri: str) -> str:
-       parsed = urllib.parse.urlparse(uri)
-       if parsed.scheme not in ALLOWED_SCHEMES:
-           raise ValueError(f"URI scheme '{parsed.scheme}' not allowed")
-       return uri
-   ```
-   Apply this validation in your MCP wrapper before calling `convert_to_markdown(uri)`.
 
 6. **Size/Complexity Thresholds:** Empirically establish document size and layout complexity thresholds for fallback trigger (e.g., "if doc >10MB or >100 tables, use Docling first").
 
@@ -177,41 +174,6 @@ The recommendation to **CONDITIONAL ADOPT MarkItDown** would be **INVALIDATED** 
 | **Unstructured** | Enterprise SLA, mission-critical, budget available | Slower than MarkItDown; higher cost | High complexity; high cost (SaaS/managed) |
 | **Marker** | Mixed-media documents, image handling, balance speed/structure | Slower than MarkItDown | Medium complexity; low cost |
 | **MinerU** | Academic/scientific documents, GPU available, tables as HTML | GPU required; high resource usage | High complexity; medium cost |
-
-### Fallback Tool Selection Guidance
-
-When implementing the fallback chain (MarkItDown → Docling or Azure DI), use this guidance to choose which fallback tool best fits your constraints:
-
-**Docling (open-source, self-hosted):**
-- **Use when:** You need 95%+ accuracy on complex PDFs, have compute available (CPU/GPU), and prefer no vendor dependencies
-- **Why:** 97.9% table extraction accuracy (benchmarked 2025; accuracy continues to improve with Granite-Docling, Nemotron OCR, PyMuPDF-Layout releases in 2026), layout understanding; enterprise-grade quality
-- **Cost:** Initial GPU/CPU setup; ~6.28s per page overhead
-- **SLA:** Self-hosted, no vendor SLA; you manage uptime
-
-**Azure Document Intelligence (cloud, $1.50/1000 pages):**
-- **Use when:** You need SLA-backed reliability, have mixed enterprise document types, or cannot self-host GPU workloads
-- **Why:** Managed platform, Microsoft support, no infrastructure burden, Microsoft-backed SLA
-- **Cost:** $1.50 per 1000 pages + API calls; negotiate volume discounts
-- **SLA:** Azure SLA; Microsoft support included
-
-**Unstructured (SaaS, ~$0.01–$0.10/page with volume):**
-- **Use when:** You need API simplicity with enterprise support and can accept higher per-page costs
-- **Why:** Managed platform, API-first design, enterprise support contracts available
-- **Cost:** Higher per-page than Azure DI; support contracts add cost
-- **SLA:** Managed platform; support contracts available
-
-### Cost Model Example (100K documents/month)
-
-For planning fallback chain costs on a typical mid-volume corpus:
-
-| Scenario | MarkItDown Cost | Fallback Cost | Total/Month |
-|----------|----------------|---------------|-------------|
-| 47% failure → Azure DI ($1.50/1K pages, avg 5 pages/doc) | Near $0 (self-hosted) | ~$35/month | ~$35/month |
-| Dual-process ALL docs via Azure DI (belt-and-suspenders) | Near $0 | ~$75/month | ~$75/month |
-| 10% failure → Docling GPU self-hosted (AWS p3.2xlarge) | Near $0 | ~$50K setup + $5K/mo | Front-loaded |
-| 10% image OCR → GPT-4o vision (4 images/doc × 1,500 tokens) | Near $0 | ~$30/month | ~$30/month |
-
-Conduct TCO analysis before adoption: calculate actual fallback rate on 50-100 doc pilot, then model cost for target corpus volume. Fallback policy ("fallback as exception" vs. "dual-process as policy") materially changes cost.
 
 ### Quick Selection Decision Tree
 

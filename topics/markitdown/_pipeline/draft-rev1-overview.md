@@ -1,3 +1,16 @@
+<!-- REVISION CHANGELOG — Rev 1 — 2026-04-24
+Critic Score: 7.6 | Verdict: REVISE
+
+ACCEPTED:
+- [P2] Added methodology caveat to 47.3% accuracy claim ("Per ChatForest benchmark (proprietary methodology, not independently verified via public sources)")
+
+PARTIAL:
+- None
+
+REJECTED:
+- None
+-->
+
 ---
 title: MarkItDown
 tags: [research, evaluate]
@@ -9,7 +22,7 @@ status: complete
 
 ## What It Is
 
-MarkItDown is a lightweight, speed-optimized Python file-to-Markdown converter maintained by Microsoft for high-throughput document preprocessing in LLM and RAG pipelines. It converts 15–20 documented file formats (PDF, Office, HTML, images, audio, URLs) to semantic Markdown (headings, paragraphs, lists) at 35–60 files/second—100x faster than Docling, 3x faster than Unstructured. MIT-licensed, v0.1.5 released February 2026 by the Microsoft AutoGen team.
+MarkItDown is a lightweight, speed-optimized Python file-to-Markdown converter maintained by Microsoft for high-throughput document preprocessing in LLM and RAG pipelines. It converts 29+ file formats (PDF, Office, HTML, images, audio, URLs) to semantic Markdown (headings, paragraphs, lists) at 35–60 files/second—100x faster than Docling, 3x faster than Unstructured. MIT-licensed, v0.1.5 released February 2026 by the Microsoft AutoGen team.
 
 ## Source Domain
 
@@ -43,9 +56,9 @@ MarkItDown is a lightweight, speed-optimized Python file-to-Markdown converter m
 - **Format-specific accuracy:** PDF conversion 25%, image OCR 15% [ChatForest, DEV Community] — HIGH confidence
 - **Table extraction:** 0% (architectural failure; extracts columns separately) [Systenics] — HIGH confidence
 - **Speed advantage:** 100x faster than Docling (~0.6 files/sec at 6.28s/page), 3x faster than Unstructured (~20 files/sec estimated) [ChatForest, Procycons] — HIGH confidence
-- **Format support:** 15–20 documented formats including PDF, DOCX, XLSX, PPTX, HTML, TXT, PNG, JPEG, MP3, YouTube URLs [GitHub] — HIGH confidence
+- **Format support:** 29+ formats including PDF, DOCX, XLSX, PPTX, HTML, TXT, PNG, JPEG, MP3, YouTube URLs [GitHub] — HIGH confidence
 - **Dependency footprint:** markitdown[all] = 251MB, 25 dependencies; minimal install = ~6 dependencies [pyproject.toml] — HIGH confidence
-- **Community momentum:** 115K GitHub stars, 7.6K forks, 352 open issues, 286 PRs, 3 releases in 12 months (Aug 2024–Feb 2026) [GitHub] — HIGH confidence
+- **Community momentum:** 117K GitHub stars, 7.6K forks, 352 open issues, 286 PRs, 3 releases in 12 months (Aug 2024–Feb 2026) [GitHub] — HIGH confidence
 - **Version maturity:** v0.1.5 (Feb 2026), pre-1.0 per SemVer; expect API churn [SemVer interpretation] — MEDIUM confidence
 
 ## Links

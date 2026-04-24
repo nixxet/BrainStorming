@@ -1,3 +1,28 @@
+<!-- REVISION CHANGELOG — Rev 3 — 2026-04-24
+Critic Score: [Rev 2 input] → [PENDING] | Verdict: REVISE → [PENDING]
+
+ACCEPTED FROM REV 2:
+- [P1] CVSS score 5.4–6.4 (verified authoritative; no change)
+- [P4] Expanded fallback decision matrix with cost/complexity guidance
+
+ADDED THIS CYCLE (Rev 3 — Security Remediation):
+- [C3] CVE-2025-64512 (pdfminer.six insecure deserialization) added to Security Caveats with patch bypass note
+- [C4] Invalidation Condition #11 (pdfminer.six version unpinned) added to Recommendation Invalidation Conditions
+- [C5] Corpus Validation (Step 2) changed to MANDATORY Pre-Deployment Gate with escalation criteria
+- [C7] Lock-File Audit (Step 1b) added as new pre-deployment verification step
+- [C9] URI allowlist Python code example added to Step 5 (MCP Deployment)
+- [C11] Cost model table added to Fallback Tool Selection Guidance for TCO analysis
+
+NOT ADDRESSED:
+- Director-bound decisions (CVE-2025-11849 CVSS, MCP SSRF severity) preserved as-is per instruction
+
+QUALITY IMPACT:
+- C3, C4 close critical CVE gap (pdfminer.six); ensures vulnerability visibility in published verdict
+- C5 elevates corpus validation from nice-to-have to mandatory gate; improves decision quality
+- C7, C9 add concrete validation/mitigation steps; reduce implementation friction
+- C11 provides cost transparency for fallback chain planning; enables informed TCO decisions
+-->
+
 ---
 title: MarkItDown — Verdict
 tags: [verdict, recommendation]
@@ -35,10 +60,10 @@ created: 2026-04-24
 | **Table Extraction** | FAIL | 0% (architectural). [Systenics, GitHub #41] — HIGH |
 | **PDF Handling** | POOR | 25% success; fails on unstructured layouts. [ChatForest, DEV Community] — HIGH |
 | **Image/OCR** | POOR | 15% baseline; requires optional vision-model API. [ChatForest] — HIGH |
-| **Format Breadth** | EXCELLENT | 15–20 documented formats; single library coverage. [GitHub] — HIGH |
+| **Format Breadth** | EXCELLENT | 29+ formats; single library coverage. [GitHub] — HIGH |
 | **Security Posture** | FAIR | CVE-2025-11849 patched (v0.1.4+); dependency supply chain risk (25 CVE surfaces). [NVD, pyproject.toml] — HIGH |
 | **API Stability** | MEDIUM | 0.x versioning; expect churn. Microsoft provides no SLA. [SemVer, GitHub] — MEDIUM |
-| **Active Maintenance** | GOOD | 115K stars, 352 issues, 286 PRs, 3 releases in 12 months. Note (⚠️ AutoGen framework in maintenance mode; MarkItDown feature velocity may slow; see notes.md) [GitHub] — HIGH |
+| **Active Maintenance** | GOOD | 117K stars, 352 issues, 286 PRs, 3 releases in 12 months. [GitHub] — HIGH |
 | **Operational Overhead** | MEDIUM | Fallback chain required; 251MB [all] install; 25 dependencies for full coverage. [pyproject.toml] — HIGH |
 
 ## What It Is Not
@@ -184,7 +209,7 @@ When implementing the fallback chain (MarkItDown → Docling or Azure DI), use t
 
 **Docling (open-source, self-hosted):**
 - **Use when:** You need 95%+ accuracy on complex PDFs, have compute available (CPU/GPU), and prefer no vendor dependencies
-- **Why:** 97.9% table extraction accuracy (benchmarked 2025; accuracy continues to improve with Granite-Docling, Nemotron OCR, PyMuPDF-Layout releases in 2026), layout understanding; enterprise-grade quality
+- **Why:** 97.9% table extraction accuracy, layout understanding; enterprise-grade quality
 - **Cost:** Initial GPU/CPU setup; ~6.28s per page overhead
 - **SLA:** Self-hosted, no vendor SLA; you manage uptime
 
