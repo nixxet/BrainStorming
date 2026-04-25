@@ -82,3 +82,7 @@ Optional private or local pipeline artifacts should stay out of public mirrors u
 - Use `scripts/verify-citations.js` to check URL reachability.
 - Use `scripts/check-staleness.js` to flag topics that need refresh.
 - Before public release, run secret scanning and text searches for private identifiers.
+
+---
+
+*BrainStorming | Public-facing research hub — sanitized mirror of brainstorming-priv | Active | 2026-04-25*
