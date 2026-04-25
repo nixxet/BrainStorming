@@ -34,6 +34,12 @@ test("validate-pipeline-state skips reserved metadata directories", () => {
   assert.ok(!payload.results.some(topic => topic.slug === "_meta"));
 });
 
+test("schema validator accepts current topic state and evidence contracts", () => {
+  const result = run(["scripts/validate-schemas.js"]);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stdout, /Schema validation passed/);
+});
+
 test("public export excludes private pipeline and meta artifacts", () => {
   const result = run(["scripts/export-public.js"]);
   assert.equal(result.status, 0, result.stderr);
@@ -62,4 +68,13 @@ test("citation checker blocks private network URLs", () => {
   } finally {
     fs.rmSync(topicDir, { recursive: true, force: true });
   }
+});
+
+test("leadership index generator writes decision metadata", () => {
+  const result = run(["scripts/generate-leadership-index.js"]);
+  assert.equal(result.status, 0, result.stderr);
+
+  const index = fs.readFileSync(path.join(repoRoot, "topics", "index.md"), "utf8");
+  assert.match(index, /\| Topic \| Status \| Workflow \| Score \| Confidence \| Freshness \| Citations \| Security \| Verdict \|/);
+  assert.match(index, /MarkItDown/);
 });

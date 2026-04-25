@@ -80,12 +80,16 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 | Command | Purpose |
 | --- | --- |
 | `npm run preflight:all` | Run local syntax, topic, state, staleness, and test gates |
+| `npm run release:check` | Run local preflight, secret scan, and public export |
 | `npm run regenerate-index` | Rebuild topic indexes from published verdict files |
+| `npm run index:leadership` | Generate the leadership-facing `topics/index.md` |
 | `npm run validate-pipeline-state` | Validate topic pipeline metadata when present |
+| `npm run validate:schemas` | Validate pipeline state and evidence files against repository schemas |
 | `npm run validate-pipeline-state:repair` | Apply safe derived repairs to topic pipeline metadata |
 | `npm run bench-report` | Generate a quality benchmark report |
 | `npm run verify-citations -- --topic {slug}` | Check URL reachability for one topic |
 | `npm run verify-citations:all` | Check URL reachability across topics |
+| `npm run verify-citations:all -- --concurrency 5 --cache` | Check citations with bounded concurrency and same-day URL cache |
 | `npm run check-staleness:report` | Flag stale topics by decay class |
 | `npm run topic-init` | Scaffold a new topic folder |
 | `npm run topic-validate:all` | Validate published topic structure |

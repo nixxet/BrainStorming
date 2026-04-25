@@ -25,6 +25,7 @@ const net = require('node:net');
 const ROOT       = path.join(__dirname, '..');
 const TOPICS_DIR = path.join(ROOT, 'topics');
 const META_DIR   = path.join(TOPICS_DIR, '_meta');
+const CACHE_PATH = path.join(META_DIR, 'citation-cache.json');
 
 const SCOPE_BOUNDARY = `This script verifies that URLs resolve. It does not verify that cited pages support the claims made. Availability validation and semantic claim validation are different problems.`;
 
@@ -51,6 +52,7 @@ Usage:
   node scripts/verify-citations.js --topic {slug} --claim-check  Verify + check claim text in page body
   node scripts/verify-citations.js --all                        Verify all topics + write aggregate report
   node scripts/verify-citations.js --all --claim-check          Verify + claim-check all topics
+  node scripts/verify-citations.js --all --concurrency 5 --cache Verify with bounded concurrency and same-day cache
 
 --claim-check: For each reachable URL, fetches the page body (up to 50KB) and checks whether
 significant terms from the citation's link text appear in the content. Reports CLAIM-PRESENT,
@@ -66,11 +68,45 @@ Exit codes: 0 = all pass/warn  |  1 = any DEAD, TIMEOUT, ERROR, or CLAIM-ABSENT
 const topicArg      = args.includes('--topic') ? args[args.indexOf('--topic') + 1] : null;
 const allMode       = args.includes('--all');
 const claimCheckMode = args.includes('--claim-check');
+const cacheMode = args.includes('--cache');
+const concurrencyArg = args.includes('--concurrency') ? Number(args[args.indexOf('--concurrency') + 1]) : 1;
+const concurrency = Number.isInteger(concurrencyArg) && concurrencyArg > 0 ? concurrencyArg : 1;
 
 if (!topicArg && !allMode) {
   console.error('Error: provide --topic {slug} or --all');
   process.exit(1);
 }
+
+function readCache() {
+  if (!cacheMode || !fs.existsSync(CACHE_PATH)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function writeCache(cache) {
+  if (!cacheMode) return;
+  fs.mkdirSync(META_DIR, { recursive: true });
+  fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
+}
+
+async function mapLimit(items, limit, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+const citationCache = readCache();
 
 // ── HTTP checking ─────────────────────────────────────────────────────────────
 
@@ -432,12 +468,18 @@ async function verifyTopic(slug) {
   const uniqueUrls = [...new Set(allUrls.map(u => u.url))];
   const checkResults = new Map();
 
-  for (const url of uniqueUrls) {
+  await mapLimit(uniqueUrls, concurrency, async (url) => {
     process.stdout.write(`  ${url.slice(0, 80)}... `);
-    const result = await checkUrl(url, '');
+    const cached = cacheMode && !claimCheckMode && citationCache[url]?.checked_on === today
+      ? citationCache[url].result
+      : null;
+    const result = cached || await checkUrl(url, '');
+    if (cacheMode && !claimCheckMode) {
+      citationCache[url] = { checked_on: today, result };
+    }
     checkResults.set(url, result);
-    console.log(result.status + (result.http_code ? ` (${result.http_code})` : ''));
-  }
+    console.log(`${cached ? 'CACHE_' : ''}${result.status}` + (result.http_code ? ` (${result.http_code})` : ''));
+  });
 
   // Optional: claim-check reachable URLs
   const claimResults = new Map(); // url -> { claimVerdict, linkText }
@@ -622,6 +664,7 @@ async function main() {
 
     const aggPath = path.join(META_DIR, `citation-check-${today}.md`);
     fs.writeFileSync(aggPath, aggLines.join('\n'), 'utf8');
+    writeCache(citationCache);
     console.log(`\nAggregate report written: ${aggPath}`);
 
     process.exit(anyFailed ? 1 : 0);
@@ -640,6 +683,7 @@ async function main() {
     fs.mkdirSync(pipelineDir, { recursive: true });
     const jsonPath = path.join(pipelineDir, `citation-check-${today}.json`);
     fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
+    writeCache(citationCache);
     console.log(`\nJSON results: ${jsonPath}`);
 
     process.exit(hasFailed(report) ? 1 : 0);
