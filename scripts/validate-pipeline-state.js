@@ -17,6 +17,7 @@ function parseArgs(argv) {
   const args = {
     topic: null,
     write: false,
+    repair: false,
     json: false,
   };
 
@@ -27,6 +28,8 @@ function parseArgs(argv) {
       i += 1;
     } else if (arg === "--write") {
       args.write = true;
+    } else if (arg === "--repair") {
+      args.repair = true;
     } else if (arg === "--json") {
       args.json = true;
     } else if (arg === "--help" || arg === "-h") {
@@ -44,10 +47,11 @@ function parseArgs(argv) {
 
 function printHelp() {
   console.log(`Usage:
-  node scripts/validate-pipeline-state.js [--topic <slug>] [--write] [--json]
+  node scripts/validate-pipeline-state.js [--topic <slug>] [--repair] [--write] [--json]
 
 Options:
   --topic <slug>   Validate a single topic under topics/<slug>/
+  --repair         Show safe state.json corrections that would be applied
   --write          Apply safe state.json corrections
   --json           Output JSON summary
 `);
@@ -468,7 +472,7 @@ function getTopicDirs(topicArg) {
     .readdirSync(topicsRoot)
     .map((entry) => path.join(topicsRoot, entry))
     .filter((entryPath) => fs.statSync(entryPath).isDirectory())
-    .filter((entryPath) => path.basename(entryPath) !== "_tmp");
+    .filter((entryPath) => !path.basename(entryPath).startsWith("_"));
 }
 
 function main() {
@@ -491,6 +495,9 @@ function main() {
   console.log(`Checked ${summary.topicsChecked} topic pipeline states.`);
   console.log(`Topics with issues: ${summary.topicsWithIssues}`);
   console.log(`Topics updated: ${summary.topicsUpdated}`);
+  if (options.repair && !options.write) {
+    console.log("Repair preview only. Re-run with --write to apply safe corrections.");
+  }
 
   for (const result of results) {
     if (result.issues.length === 0 && result.appliedFixes.length === 0) {

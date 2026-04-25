@@ -1,7 +1,26 @@
 # Session temp files
 *.tmp
+*.temp
+*.log
 .claude/sessions/
 topics/_tmp/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cert
+
+# Generated reports and exports
+topics/_meta/
+topics/*/_pipeline/
+dist/
+coverage/
 
 # Node.js
 node_modules/

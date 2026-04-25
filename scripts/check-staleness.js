@@ -53,12 +53,28 @@ const APPROACHING_BAND = {
   stable: 90
 };
 
+function normalizeFindingId(value) {
+  if (typeof value !== 'string') return value;
+  const match = value.match(/^([A-Za-z]+\d+)/);
+  return match ? match[1] : value;
+}
+
+function normalizeDecayClass(value, fallback = 'slow') {
+  if (typeof value !== 'string') return fallback;
+  const direct = value.toLowerCase().trim();
+  if (THRESHOLDS[direct]) return direct;
+  for (const key of Object.keys(THRESHOLDS)) {
+    if (direct.includes(key)) return key;
+  }
+  return fallback;
+}
+
 // ── Frontmatter parser (simple YAML, handles key: value lines) ───────────────
 function parseFrontmatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) return {};
   const result = {};
-  for (const line of match[1].split('\n')) {
+  for (const line of match[1].split(/\r?\n/)) {
     const m = line.match(/^(\w[\w_-]*):\s*(.+)$/);
     if (m) result[m[1]] = m[2].trim();
   }
@@ -137,14 +153,15 @@ for (const slug of slugs) {
 
   const staleness_summary = evidence?.staleness_summary;
   const findings = evidence?.findings ?? [];
+  const materialFindingIds = (staleness_summary?.material_findings ?? []).map(normalizeFindingId);
 
   // Case 1: evidence.json with staleness_summary
-  if (staleness_summary?.material_findings?.length > 0) {
-    decayClass = staleness_summary.fastest_material_decay ?? 'slow';
+  if (materialFindingIds.length > 0) {
+    decayClass = normalizeDecayClass(staleness_summary.fastest_material_decay, 'slow');
 
-    const overdueMaterial = staleness_summary.material_findings.filter(id => {
+    const overdueMaterial = materialFindingIds.filter(id => {
       const finding = findings.find(f => f.id === id);
-      const decay = finding?.confidence_decay ?? 'slow';
+      const decay = normalizeDecayClass(finding?.confidence_decay, 'slow');
       return ageInDays > THRESHOLDS[decay];
     });
 
@@ -163,14 +180,14 @@ for (const slug of slugs) {
       // Days overdue: max overdue amount among triggering findings
       daysOverdue = Math.max(...triggeringFindings.map(id => {
         const finding = findings.find(f => f.id === id);
-        const decay = finding?.confidence_decay ?? 'slow';
+        const decay = normalizeDecayClass(finding?.confidence_decay, 'slow');
         return Math.round(ageInDays - THRESHOLDS[decay]);
       }));
     } else {
       // Check if approaching
-      const closestThreshold = Math.min(...staleness_summary.material_findings.map(id => {
+      const closestThreshold = Math.min(...materialFindingIds.map(id => {
         const finding = findings.find(f => f.id === id);
-        const decay = finding?.confidence_decay ?? 'slow';
+        const decay = normalizeDecayClass(finding?.confidence_decay, 'slow');
         return THRESHOLDS[decay] - ageInDays;
       }));
 
@@ -314,9 +331,26 @@ const report = lines.join('\n');
 
 // ── Output ───────────────────────────────────────────────────────────────────
 
-console.log(report);
+if (outputJson) {
+  console.log(JSON.stringify({
+    checked_at: todayStr,
+    thresholds: THRESHOLDS,
+    summary: {
+      overdue: overdue.length,
+      approaching: approaching.length,
+      fresh: upToDate.length,
+      skipped: skipped.length,
+    },
+    overdue,
+    approaching,
+    fresh: upToDate,
+    skipped,
+  }, null, 2));
+} else {
+  console.log(report);
+}
 
-if (writeReport) {
+if (writeReport && !outputJson) {
   fs.mkdirSync(META_DIR, { recursive: true });
   const outPath = path.join(META_DIR, `stale-report-${todayStr}.md`);
   fs.writeFileSync(outPath, report, 'utf8');

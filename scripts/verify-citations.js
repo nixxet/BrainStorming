@@ -19,6 +19,8 @@ const fs = require('fs');
 const path = require('path');
 const https = require('node:https');
 const http = require('node:http');
+const dns = require('node:dns').promises;
+const net = require('node:net');
 
 const ROOT       = path.join(__dirname, '..');
 const TOPICS_DIR = path.join(ROOT, 'topics');
@@ -26,12 +28,13 @@ const META_DIR   = path.join(TOPICS_DIR, '_meta');
 
 const SCOPE_BOUNDARY = `This script verifies that URLs resolve. It does not verify that cited pages support the claims made. Availability validation and semantic claim validation are different problems.`;
 
-const PLACEHOLDER_PATTERNS = /localhost|example\.com|127\.0\.0\.1|TODO|TBD|PLACEHOLDER/i;
+const PLACEHOLDER_PATTERNS = /example\.com|TODO|TBD|PLACEHOLDER/i;
 const URL_REGEX = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
 const PUBLISHED_FILES = ['overview.md', 'notes.md', 'verdict.md'];
 const TIMEOUT_MS = 10000;
 const MAX_REDIRECTS = 3;
 const RAW_GH_RETRY_DELAY_MS = 1500;
+const PRIVATE_HOST_PATTERNS = /(^|\.)localhost$|(^|\.)local$|(^|\.)internal$/i;
 
 // ── Args ─────────────────────────────────────────────────────────────────────
 
@@ -120,6 +123,67 @@ function makeRequest(url, method, redirectCount = 0) {
   });
 }
 
+function isPrivateIPv4(address) {
+  const parts = address.split('.').map(Number);
+  if (parts.length !== 4 || parts.some(n => Number.isNaN(n) || n < 0 || n > 255)) return false;
+  const [a, b] = parts;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168)
+  );
+}
+
+function isPrivateIPv6(address) {
+  const normalized = address.toLowerCase();
+  return normalized === '::1' || normalized.startsWith('fe80:') || normalized.startsWith('fc') || normalized.startsWith('fd');
+}
+
+async function assertSafeUrl(url) {
+  let parsed;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { safe: false, status: 'ERROR', note: 'invalid url' };
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    return { safe: false, status: 'BLOCKED_UNSUPPORTED_PROTOCOL', note: `unsupported protocol: ${parsed.protocol}` };
+  }
+
+  const hostname = parsed.hostname.toLowerCase();
+  if (PRIVATE_HOST_PATTERNS.test(hostname)) {
+    return { safe: false, status: 'BLOCKED_PRIVATE_NETWORK', note: `blocked hostname: ${hostname}` };
+  }
+
+  const literalVersion = net.isIP(hostname);
+  if (literalVersion === 4 && isPrivateIPv4(hostname)) {
+    return { safe: false, status: 'BLOCKED_PRIVATE_NETWORK', note: `blocked private IPv4: ${hostname}` };
+  }
+  if (literalVersion === 6 && isPrivateIPv6(hostname)) {
+    return { safe: false, status: 'BLOCKED_PRIVATE_NETWORK', note: `blocked private IPv6: ${hostname}` };
+  }
+
+  try {
+    const records = await dns.lookup(hostname, { all: true });
+    for (const record of records) {
+      if (record.family === 4 && isPrivateIPv4(record.address)) {
+        return { safe: false, status: 'BLOCKED_PRIVATE_NETWORK', note: `DNS resolved to private IPv4: ${record.address}` };
+      }
+      if (record.family === 6 && isPrivateIPv6(record.address)) {
+        return { safe: false, status: 'BLOCKED_PRIVATE_NETWORK', note: `DNS resolved to private IPv6: ${record.address}` };
+      }
+    }
+  } catch (err) {
+    return { safe: false, status: 'DNS_ERROR', note: err.code || err.message };
+  }
+
+  return { safe: true };
+}
+
 /**
  * Follow redirects up to MAX_REDIRECTS, return final { statusCode, finalUrl }.
  */
@@ -128,6 +192,11 @@ async function fetchFollowRedirects(url, method) {
   let hops = 0;
 
   while (hops <= MAX_REDIRECTS) {
+    const safety = await assertSafeUrl(current);
+    if (!safety.safe) {
+      return { statusCode: null, finalUrl: current, error: safety.status, note: safety.note };
+    }
+
     const result = await makeRequest(current, method, hops);
 
     if (result.maxRedirectsExceeded) {
@@ -165,6 +234,9 @@ async function checkUrl(url, sourceFile) {
 
       if (result.error === 'MAX_REDIRECTS') {
         return { ...base, status: 'ERROR', method_used: method, final_url: result.finalUrl, note: 'max redirects exceeded' };
+      }
+      if (['DNS_ERROR', 'BLOCKED_PRIVATE_NETWORK', 'BLOCKED_UNSUPPORTED_PROTOCOL'].includes(result.error)) {
+        return { ...base, status: result.error, method_used: method, final_url: result.finalUrl, note: result.note };
       }
 
       const code = result.statusCode;
@@ -411,7 +483,7 @@ async function verifyTopic(slug) {
 }
 
 function buildReport(slug, date, results) {
-  const counts = { ok: 0, redirect_ok: 0, warn_auth: 0, warn_placeholder: 0, timeout: 0, dead: 0, error: 0 };
+  const counts = { ok: 0, redirect_ok: 0, warn_auth: 0, warn_placeholder: 0, timeout: 0, dead: 0, error: 0, blocked: 0, dns_error: 0 };
   for (const r of results) {
     const key = r.status.toLowerCase().replace('_ok', '_ok').replace('warn_', 'warn_');
     if (key === 'ok') counts.ok++;
@@ -420,6 +492,8 @@ function buildReport(slug, date, results) {
     else if (key === 'warn_placeholder') counts.warn_placeholder++;
     else if (key === 'timeout') counts.timeout++;
     else if (key === 'dead') counts.dead++;
+    else if (key.startsWith('blocked')) counts.blocked++;
+    else if (key === 'dns_error') counts.dns_error++;
     else if (key === 'error') counts.error++;
   }
 
@@ -442,12 +516,12 @@ function buildReport(slug, date, results) {
 }
 
 function printReport(report) {
-  const { topic_slug: slug, checked_on, total_urls, ok, redirect_ok, warn_auth, warn_placeholder, timeout, dead, error } = report;
+  const { topic_slug: slug, checked_on, total_urls, ok, redirect_ok, warn_auth, warn_placeholder, timeout, dead, error, blocked, dns_error } = report;
   console.log(`\n# Citation Check: ${slug} — ${checked_on}`);
   console.log(`\n${SCOPE_BOUNDARY}\n`);
-  console.log(`Total: ${total_urls} | OK: ${ok} | Redirect OK: ${redirect_ok} | Dead: ${dead} | Timeout: ${timeout} | Error: ${error} | Auth-Gated: ${warn_auth} | Placeholder: ${warn_placeholder}`);
+  console.log(`Total: ${total_urls} | OK: ${ok} | Redirect OK: ${redirect_ok} | Dead: ${dead} | Timeout: ${timeout} | DNS: ${dns_error} | Blocked: ${blocked} | Error: ${error} | Auth-Gated: ${warn_auth} | Placeholder: ${warn_placeholder}`);
 
-  const failed = report.results.filter(r => ['DEAD','TIMEOUT','ERROR'].includes(r.status));
+  const failed = report.results.filter(r => ['DEAD','TIMEOUT','ERROR','DNS_ERROR','BLOCKED_PRIVATE_NETWORK','BLOCKED_UNSUPPORTED_PROTOCOL'].includes(r.status));
   if (failed.length > 0) {
     console.log(`\n## Dead / Failed URLs`);
     for (const r of failed) {
@@ -478,7 +552,7 @@ function printReport(report) {
 
 function hasFailed(report) {
   return report.results.some(r =>
-    ['DEAD','TIMEOUT','ERROR'].includes(r.status) ||
+    ['DEAD','TIMEOUT','ERROR','DNS_ERROR','BLOCKED_PRIVATE_NETWORK','BLOCKED_UNSUPPORTED_PROTOCOL'].includes(r.status) ||
     (claimCheckMode && r.claim_verdict === 'CLAIM-ABSENT')
   );
 }
@@ -525,10 +599,10 @@ async function main() {
     aggLines.push(``);
     aggLines.push(`> ${SCOPE_BOUNDARY}`);
     aggLines.push(``);
-    aggLines.push(`| Topic | Total | OK | Redirect | Dead | Timeout | Error | Auth | Placeholder |`);
-    aggLines.push(`|-------|-------|----|----------|------|---------|-------|------|-------------|`);
+    aggLines.push(`| Topic | Total | OK | Redirect | Dead | Timeout | DNS | Blocked | Error | Auth | Placeholder |`);
+    aggLines.push(`|-------|-------|----|----------|------|---------|-----|---------|-------|------|-------------|`);
     for (const r of reports) {
-      aggLines.push(`| ${r.topic_slug} | ${r.total_urls} | ${r.ok} | ${r.redirect_ok} | ${r.dead} | ${r.timeout} | ${r.error} | ${r.warn_auth} | ${r.warn_placeholder} |`);
+      aggLines.push(`| ${r.topic_slug} | ${r.total_urls} | ${r.ok} | ${r.redirect_ok} | ${r.dead} | ${r.timeout} | ${r.dns_error} | ${r.blocked} | ${r.error} | ${r.warn_auth} | ${r.warn_placeholder} |`);
     }
     aggLines.push(``);
 
@@ -538,7 +612,7 @@ async function main() {
       aggLines.push(``);
       for (const r of failedTopics) {
         aggLines.push(`### ${r.topic_slug}`);
-        for (const res of r.results.filter(x => ['DEAD','TIMEOUT','ERROR'].includes(x.status))) {
+        for (const res of r.results.filter(x => ['DEAD','TIMEOUT','ERROR','DNS_ERROR','BLOCKED_PRIVATE_NETWORK','BLOCKED_UNSUPPORTED_PROTOCOL'].includes(x.status))) {
           const code = res.http_code ? ` (${res.http_code})` : '';
           aggLines.push(`- [${res.source_file}] ${res.status}${code}: ${res.url}`);
         }

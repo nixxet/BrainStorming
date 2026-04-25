@@ -79,7 +79,7 @@ You do NOT need to find a threat in every category. Skip categories that don't a
 
 ### Step 3: Recommendation Security Scan
 
-For EACH recommendation in the draft files, evaluate these six risk categories:
+For EACH recommendation in the draft files, evaluate these seven risk categories:
 
 1. **Implementation risk:** Could following this recommendation as written introduce vulnerabilities?
    - Check: default configurations, missing hardening steps, insecure protocols (HTTP vs HTTPS, TLS version), missing input validation
@@ -103,6 +103,8 @@ For EACH recommendation in the draft files, evaluate these six risk categories:
 
 6. **Compliance:** Does the recommendation comply with applicable frameworks?
    - Use the per-framework checklists below (Step 5)
+
+7. **Prompt-injection exposure:** For AI, agent, document-ingestion, browser, MCP, RAG, or automation topics, does the recommendation treat external content as untrusted data and prevent source text from overriding trusted instructions?
 
 ### Step 4: CVE and Advisory Spot-Check
 

@@ -84,7 +84,7 @@ created: 2026-04-24
   - Each dependency is a CVE surface. Recent example: CVE-2025-11849 in mammoth.
   - **High-Risk:** pdfminer.six — CVE-2025-64512 (insecure deserialization) requires explicit version pinning ≥20251107. Note: 20251107 patch is incomplete; CVE-2025-70559 is a bypass. Monitor both CVEs.
   - **Mitigation:** (1) Use minimal install (markitdown) for text/HTML only (~6 dependencies, ~50MB). (2) Regular dependency scanning with `pip-audit`, Snyk, or Dependabot. (3) Monitor GitHub security advisories for MarkItDown.
-  — [pyproject.toml](https://github.com/microsoft/markitdown/blob/main/pyproject.toml)
+  — [pyproject.toml](https://raw.githubusercontent.com/microsoft/markitdown/main/packages/markitdown/pyproject.toml)
 
 #### Plugin Security (Opt-In, Default Disabled)
 

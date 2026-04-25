@@ -23,23 +23,44 @@
     }
   ],
   "framing_gate": "confirmed",
-  "budget_cap_usd": 15.00,
+  "budget_cap_usd": 15,
   "budget_cap_source": "default",
   "phases": {
-    "phase_0": { "status": "completed", "timestamp": "2026-04-24T00:00:00Z" },
-    "phase_1": { "status": "pending" },
-    "phase_1b": { "status": "pending" },
-    "phase_2": { "status": "pending" },
-    "phase_3": { "status": "pending" },
-    "phase_4": { "status": "pending", "revision_count": 0, "verdict": null },
-    "phase_5": { "status": "pending", "verdict": null, "security_required_change_count": 0 },
+    "phase_0": {
+      "status": "completed",
+      "timestamp": "2026-04-24T00:00:00Z"
+    },
+    "phase_1": {
+      "status": "pending"
+    },
+    "phase_1b": {
+      "status": "pending"
+    },
+    "phase_2": {
+      "status": "pending"
+    },
+    "phase_3": {
+      "status": "pending"
+    },
+    "phase_4": {
+      "status": "completed",
+      "revision_count": 3,
+      "verdict": "PASS",
+      "final_score": 8.65
+    },
+    "phase_5": {
+      "status": "completed",
+      "verdict": "FLAG",
+      "security_required_change_count": 9
+    },
     "phase_6": {
-      "status": "pending",
-      "verdict": null,
-      "critical_failures": 0,
-      "high_severity_findings": 0,
-      "medium_severity_findings": 0,
-      "tester_required_change_count": 0
+      "status": "completed",
+      "verdict": "CONDITIONAL",
+      "critical_failures": 3,
+      "high_severity_findings": 5,
+      "medium_severity_findings": 4,
+      "tester_required_change_count": 4,
+      "low_severity_findings": 2
     },
     "phase_6_5": {
       "status": "pending",
@@ -50,24 +71,28 @@
       "weakened_cycle_count": 0,
       "weakened_cap_hit": false
     },
-    "phase_7": { "status": "pending" },
-    "phase_8": { "status": "pending" }
+    "phase_7": {
+      "status": "pending"
+    },
+    "phase_8": {
+      "status": "pending"
+    }
   },
   "run_metrics": {
-    "source_count": 0,
+    "source_count": 36,
     "source_domain_count": 0,
-    "contradiction_count": 0,
-    "critical_gap_count": 0,
-    "significant_gap_count": 0,
-    "minor_gap_count": 0,
-    "must_survive_caveat_count": 0,
-    "security_required_change_count": 0,
-    "tester_required_change_count": 0,
-    "critical_failures": 0,
-    "high_severity_findings": 0,
-    "medium_severity_findings": 0,
-    "first_score": 0,
-    "final_score": 0,
+    "contradiction_count": 3,
+    "critical_gap_count": 1,
+    "significant_gap_count": 5,
+    "minor_gap_count": 2,
+    "must_survive_caveat_count": 6,
+    "security_required_change_count": 9,
+    "tester_required_change_count": 4,
+    "critical_failures": 3,
+    "high_severity_findings": 5,
+    "medium_severity_findings": 4,
+    "first_score": 8.65,
+    "final_score": 8.65,
     "review_incorporation_score": 0,
     "challenges_triggered": 0,
     "challenges_unresolved": 0,
@@ -88,7 +113,10 @@
     "cost_estimate_usd": {
       "total_estimate": 0,
       "note": "Blended rates (60/40 input/output split): Sonnet ~$8/M, Opus ~$39/M. Subagent total only — excludes Director (Opus) session tokens; run /cost for full session."
-    }
+    },
+    "low_severity_findings": 2
   },
-  "errors": []
+  "errors": [],
+  "last_validated_on": "2026-04-25",
+  "last_validated_by": "scripts/validate-pipeline-state.js"
 }

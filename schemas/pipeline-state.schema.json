@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/brainstorming/pipeline-state.schema.json",
+  "title": "BrainStorming Pipeline State",
+  "type": "object",
+  "required": ["topic_slug", "workflow", "current_date", "phases", "run_metrics", "errors"],
+  "additionalProperties": true,
+  "properties": {
+    "topic_slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "topic_name": {
+      "type": "string"
+    },
+    "workflow": {
+      "type": "string",
+      "enum": ["research", "quick", "compare", "evaluate", "recommend", "cross-analyze"]
+    },
+    "current_date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "user_request": {
+      "type": "string",
+      "description": "Private by default. Public export must exclude or redact this field."
+    },
+    "security_review_required": {
+      "type": "boolean"
+    },
+    "phases": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/phase"
+      }
+    },
+    "run_metrics": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "source_count": { "type": "number" },
+        "source_domain_count": { "type": "number" },
+        "contradiction_count": { "type": "number" },
+        "critical_gap_count": { "type": "number" },
+        "significant_gap_count": { "type": "number" },
+        "minor_gap_count": { "type": "number" },
+        "must_survive_caveat_count": { "type": "number" },
+        "security_required_change_count": { "type": "number" },
+        "tester_required_change_count": { "type": "number" },
+        "first_score": { "type": "number" },
+        "final_score": { "type": "number" }
+      }
+    },
+    "errors": {
+      "type": "array"
+    }
+  },
+  "$defs": {
+    "phase": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["pending", "in_progress", "completed", "complete", "failed", "skipped"]
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "verdict": {
+          "type": ["string", "null"]
+        }
+      }
+    }
+  }
+}

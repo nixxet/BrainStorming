@@ -39,6 +39,11 @@ BrainStorming/
 | `/recommend [problem]` | Start with a problem and rank possible solutions |
 | `/cross-analyze [theme]` | Synthesize patterns across existing topic files |
 
+## Requirements
+
+- Node.js 22 or newer. The repository includes `.nvmrc` and `package.json` engine metadata.
+- npm for running local validation, export, and reporting scripts.
+
 ## Pipeline
 
 The full workflow is a Director-orchestrated multi-agent pipeline:
@@ -74,14 +79,43 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 
 | Command | Purpose |
 | --- | --- |
+| `npm run preflight:all` | Run local syntax, topic, state, staleness, and test gates |
 | `npm run regenerate-index` | Rebuild topic indexes from published verdict files |
 | `npm run validate-pipeline-state` | Validate topic pipeline metadata when present |
+| `npm run validate-pipeline-state:repair` | Apply safe derived repairs to topic pipeline metadata |
 | `npm run bench-report` | Generate a quality benchmark report |
 | `npm run verify-citations -- --topic {slug}` | Check URL reachability for one topic |
 | `npm run verify-citations:all` | Check URL reachability across topics |
 | `npm run check-staleness:report` | Flag stale topics by decay class |
 | `npm run topic-init` | Scaffold a new topic folder |
 | `npm run topic-validate:all` | Validate published topic structure |
+| `npm run export:public` | Create a sanitized public export under `dist/public/` |
+
+## Quickstart
+
+1. Start a topic through Claude Code, for example: `/evaluate "Tool X for use case Y"`.
+2. Validate local health: `npm run preflight:all`.
+3. Optionally verify network citations: `npm run preflight:network`.
+4. Generate a benchmark report when needed: `npm run bench-report`.
+5. Create a public-safe export: `npm run export:public`.
+
+## Public Export Model
+
+BrainStorming treats `_pipeline/` artifacts as private internal audit data by default. Public releases should be generated through `npm run export:public`, which copies public deliverables and excludes private pipeline state, drafts, evidence internals, citation JSON, `_meta/`, temporary files, and common secret/certificate file types.
+
+Public topic deliverables are:
+
+- `topics/{topic-slug}/overview.md`
+- `topics/{topic-slug}/notes.md`
+- `topics/{topic-slug}/verdict.md`
+
+Private/internal artifacts include:
+
+- `topics/{topic-slug}/_pipeline/`
+- `topics/_meta/`
+- raw user requests
+- draft files
+- scorecards, stress tests, and raw evidence files
 
 ## Publishing Notes
 
@@ -89,7 +123,8 @@ Before making a fork or mirror public:
 
 1. Run a secret scanner such as `trufflehog filesystem . --only-verified`.
 2. Search for organization names, personal names, local paths, and private project names.
-3. Publish from a fresh git repository, not from a private repo history.
+3. Run `npm run export:public`.
+4. Publish from the generated `dist/public/` folder or from a fresh repository, not from private repo history.
 
 ## License
 
