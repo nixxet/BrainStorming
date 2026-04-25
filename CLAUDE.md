@@ -85,4 +85,4 @@ Optional private or local pipeline artifacts should stay out of public mirrors u
 
 ---
 
-*BrainStorming | Public-facing research hub — sanitized mirror of brainstorming-priv | Active | 2026-04-25*
+*BrainStorming | Research hub for tools, frameworks, and OSS evaluation | Active | 2026-04-25*
