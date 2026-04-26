@@ -83,13 +83,16 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 | `npm run release:check` | Run local preflight, secret scan, and public export |
 | `npm run regenerate-index` | Rebuild topic indexes from published verdict files |
 | `npm run index:leadership` | Generate the leadership-facing `topics/index.md` |
+| `npm run dashboard` | Generate a local static dashboard under `dist/dashboard/` |
 | `npm run validate-pipeline-state` | Validate topic pipeline metadata when present |
 | `npm run validate:schemas` | Validate pipeline state and evidence files against repository schemas |
 | `npm run validate-pipeline-state:repair` | Apply safe derived repairs to topic pipeline metadata |
 | `npm run bench-report` | Generate a quality benchmark report |
+| `npm run trend-report` | Generate an operations trend report from benchmark and citation data |
+| `npm run claims:check` | Heuristically flag claim-like lines that need direct source review |
 | `npm run verify-citations -- --topic {slug}` | Check URL reachability for one topic |
 | `npm run verify-citations:all` | Check URL reachability across topics |
-| `npm run verify-citations:all -- --concurrency 5 --cache` | Check citations with bounded concurrency and same-day URL cache |
+| `npm run verify-citations:all -- --concurrency 5 --cache --cache-ttl-days 7` | Check citations with bounded concurrency and TTL URL cache |
 | `npm run check-staleness:report` | Flag stale topics by decay class |
 | `npm run topic-init` | Scaffold a new topic folder |
 | `npm run topic-validate:all` | Validate published topic structure |
@@ -101,7 +104,8 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 2. Validate local health: `npm run preflight:all`.
 3. Optionally verify network citations: `npm run preflight:network`.
 4. Generate a benchmark report when needed: `npm run bench-report`.
-5. Create a public-safe export: `npm run export:public`.
+5. Generate leadership views when needed: `npm run index:leadership && npm run dashboard && npm run trend-report`.
+6. Create a public-safe export: `npm run export:public`.
 
 ## Public Export Model
 

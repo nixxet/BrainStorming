@@ -52,7 +52,8 @@ Usage:
   node scripts/verify-citations.js --topic {slug} --claim-check  Verify + check claim text in page body
   node scripts/verify-citations.js --all                        Verify all topics + write aggregate report
   node scripts/verify-citations.js --all --claim-check          Verify + claim-check all topics
-  node scripts/verify-citations.js --all --concurrency 5 --cache Verify with bounded concurrency and same-day cache
+  node scripts/verify-citations.js --all --concurrency 5 --cache --cache-ttl-days 7
+                                                               Verify with bounded concurrency and TTL cache
 
 --claim-check: For each reachable URL, fetches the page body (up to 50KB) and checks whether
 significant terms from the citation's link text appear in the content. Reports CLAIM-PRESENT,
@@ -71,6 +72,8 @@ const claimCheckMode = args.includes('--claim-check');
 const cacheMode = args.includes('--cache');
 const concurrencyArg = args.includes('--concurrency') ? Number(args[args.indexOf('--concurrency') + 1]) : 1;
 const concurrency = Number.isInteger(concurrencyArg) && concurrencyArg > 0 ? concurrencyArg : 1;
+const cacheTtlDaysArg = args.includes('--cache-ttl-days') ? Number(args[args.indexOf('--cache-ttl-days') + 1]) : 1;
+const cacheTtlDays = Number.isFinite(cacheTtlDaysArg) && cacheTtlDaysArg > 0 ? cacheTtlDaysArg : 1;
 
 if (!topicArg && !allMode) {
   console.error('Error: provide --topic {slug} or --all');
@@ -107,6 +110,15 @@ async function mapLimit(items, limit, mapper) {
 }
 
 const citationCache = readCache();
+
+function isCacheFresh(entry, today) {
+  if (!entry?.checked_on) return false;
+  const checked = new Date(`${entry.checked_on}T00:00:00Z`);
+  const now = new Date(`${today}T00:00:00Z`);
+  if (Number.isNaN(checked.getTime()) || Number.isNaN(now.getTime())) return false;
+  const ageDays = (now - checked) / 86400000;
+  return ageDays >= 0 && ageDays < cacheTtlDays;
+}
 
 // ── HTTP checking ─────────────────────────────────────────────────────────────
 
@@ -470,8 +482,9 @@ async function verifyTopic(slug) {
 
   await mapLimit(uniqueUrls, concurrency, async (url) => {
     process.stdout.write(`  ${url.slice(0, 80)}... `);
-    const cached = cacheMode && !claimCheckMode && citationCache[url]?.checked_on === today
-      ? citationCache[url].result
+    const cacheEntry = citationCache[url];
+    const cached = cacheMode && !claimCheckMode && isCacheFresh(cacheEntry, today)
+      ? cacheEntry.result
       : null;
     const result = cached || await checkUrl(url, '');
     if (cacheMode && !claimCheckMode) {

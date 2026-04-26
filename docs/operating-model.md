@@ -30,6 +30,8 @@ Do not publish raw repository history when private topics, user requests, drafts
 
 - Run `npm run preflight:all` before committing.
 - Run `npm run preflight:network` before leadership delivery when network access is available.
+- Run `npm run claims:check` before leadership delivery to identify claims that need direct source review.
+- Run `npm run index:leadership`, `npm run dashboard`, and `npm run trend-report` before stakeholder review packets.
 - Review stale topics monthly.
 - Re-run citation checks before external sharing.
 - Archive superseded topics rather than deleting them.

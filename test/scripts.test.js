@@ -62,7 +62,7 @@ test("citation checker blocks private network URLs", () => {
     fs.writeFileSync(path.join(topicDir, "notes.md"), "# Notes\n", "utf8");
     fs.writeFileSync(path.join(topicDir, "verdict.md"), "# Verdict\n", "utf8");
 
-    const result = run(["scripts/verify-citations.js", "--topic", slug]);
+    const result = run(["scripts/verify-citations.js", "--topic", slug, "--cache", "--cache-ttl-days", "7"]);
     assert.equal(result.status, 1);
     assert.match(result.stdout, /BLOCKED_PRIVATE_NETWORK/);
   } finally {
@@ -77,4 +77,30 @@ test("leadership index generator writes decision metadata", () => {
   const index = fs.readFileSync(path.join(repoRoot, "topics", "index.md"), "utf8");
   assert.match(index, /\| Topic \| Status \| Workflow \| Score \| Confidence \| Freshness \| Citations \| Security \| Verdict \|/);
   assert.match(index, /MarkItDown/);
+});
+
+test("dashboard generator writes local HTML summary", () => {
+  const result = run(["scripts/generate-dashboard.js"]);
+  assert.equal(result.status, 0, result.stderr);
+
+  const dashboard = fs.readFileSync(path.join(repoRoot, "dist", "dashboard", "index.html"), "utf8");
+  assert.match(dashboard, /BrainStorming Dashboard/);
+  assert.match(dashboard, /MarkItDown/);
+});
+
+test("claim support checker emits parseable JSON summary", () => {
+  const result = run(["scripts/claim-support-check.js", "--all"]);
+  assert.equal(result.status, 0, result.stderr);
+
+  const payload = JSON.parse(result.stdout);
+  assert.ok(payload.summary.topics_checked >= 2);
+  assert.ok(Number.isInteger(payload.summary.claims_checked));
+  assert.ok(Array.isArray(payload.topics));
+});
+
+test("trend report generator writes operations report", () => {
+  const result = run(["scripts/trend-report.js"]);
+  assert.equal(result.status, 0, result.stderr);
+
+  assert.match(result.stdout, /Trend report written/);
 });
