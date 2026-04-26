@@ -17,6 +17,7 @@ const {
 
 const repoRoot = path.resolve(__dirname, "..");
 const fixtureRoot = path.join(__dirname, "fixtures", "topics");
+const citationCachePath = path.join(repoRoot, "topics", "_meta", "citation-cache.json");
 
 function run(args) {
   return spawnSync(process.execPath, args, {
@@ -31,6 +32,33 @@ function installFixtureTopic(slug) {
   fs.rmSync(target, { recursive: true, force: true });
   fs.cpSync(source, target, { recursive: true });
   return target;
+}
+
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysAgoIso(days) {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() - days);
+  return date.toISOString().slice(0, 10);
+}
+
+function withCitationCache(cache, fn) {
+  const hadCache = fs.existsSync(citationCachePath);
+  const original = hadCache ? fs.readFileSync(citationCachePath, "utf8") : null;
+  fs.mkdirSync(path.dirname(citationCachePath), { recursive: true });
+  fs.writeFileSync(citationCachePath, `${JSON.stringify(cache, null, 2)}\n`, "utf8");
+
+  try {
+    return fn();
+  } finally {
+    if (hadCache) {
+      fs.writeFileSync(citationCachePath, original, "utf8");
+    } else {
+      fs.rmSync(citationCachePath, { force: true });
+    }
+  }
 }
 
 test("frontmatter parser handles fixture markdown with CRLF line endings", () => {
@@ -198,9 +226,107 @@ test("citation checker blocks private network URLs", () => {
   const topicDir = installFixtureTopic(slug);
 
   try {
-    const result = run(["scripts/verify-citations.js", "--topic", slug, "--cache", "--cache-ttl-days", "7"]);
+    const result = run(["scripts/verify-citations.js", "--topic", slug]);
     assert.equal(result.status, 1);
     assert.match(result.stdout, /BLOCKED_PRIVATE_NETWORK/);
+  } finally {
+    fs.rmSync(topicDir, { recursive: true, force: true });
+  }
+});
+
+test("citation checker writes cache entries with actionable metadata", () => {
+  const slug = "broken-citation-topic";
+  const url = "http://127.0.0.1/secret";
+  const topicDir = installFixtureTopic(slug);
+
+  try {
+    withCitationCache({}, () => {
+      const result = run(["scripts/verify-citations.js", "--topic", slug, "--cache", "--cache-ttl-days", "7"]);
+      assert.equal(result.status, 1);
+      assert.match(result.stdout, /BLOCKED_PRIVATE_NETWORK/);
+
+      const cache = JSON.parse(fs.readFileSync(citationCachePath, "utf8"));
+      assert.equal(cache[url].url, url);
+      assert.equal(cache[url].checked_on, todayIso());
+      assert.equal(cache[url].final_url, url);
+      assert.equal(cache[url].status, "BLOCKED_PRIVATE_NETWORK");
+      assert.equal(cache[url].http_code, null);
+      assert.equal(cache[url].error_class, "private_network_blocked");
+      assert.equal(cache[url].result.status, "BLOCKED_PRIVATE_NETWORK");
+    });
+  } finally {
+    fs.rmSync(topicDir, { recursive: true, force: true });
+  }
+});
+
+test("citation checker uses fresh cache and bypasses cache when omitted", () => {
+  const slug = "broken-citation-topic";
+  const url = "http://127.0.0.1/secret";
+  const topicDir = installFixtureTopic(slug);
+  const cachedOk = {
+    [url]: {
+      url,
+      checked_on: todayIso(),
+      final_url: url,
+      status: "OK",
+      http_code: 200,
+      error_class: "ok",
+      result: {
+        url,
+        source_file: "",
+        final_url: url,
+        http_code: 200,
+        method_used: "HEAD",
+        status: "OK",
+      },
+    },
+  };
+
+  try {
+    withCitationCache(cachedOk, () => {
+      const cached = run(["scripts/verify-citations.js", "--topic", slug, "--cache", "--cache-ttl-days", "7"]);
+      assert.equal(cached.status, 0, cached.stderr);
+      assert.match(cached.stdout, /CACHE_OK/);
+
+      const bypassed = run(["scripts/verify-citations.js", "--topic", slug]);
+      assert.equal(bypassed.status, 1);
+      assert.match(bypassed.stdout, /BLOCKED_PRIVATE_NETWORK/);
+    });
+  } finally {
+    fs.rmSync(topicDir, { recursive: true, force: true });
+  }
+});
+
+test("citation checker expires stale cache entries", () => {
+  const slug = "broken-citation-topic";
+  const url = "http://127.0.0.1/secret";
+  const topicDir = installFixtureTopic(slug);
+  const staleCache = {
+    [url]: {
+      url,
+      checked_on: daysAgoIso(30),
+      final_url: url,
+      status: "OK",
+      http_code: 200,
+      error_class: "ok",
+      result: {
+        url,
+        source_file: "",
+        final_url: url,
+        http_code: 200,
+        method_used: "HEAD",
+        status: "OK",
+      },
+    },
+  };
+
+  try {
+    withCitationCache(staleCache, () => {
+      const result = run(["scripts/verify-citations.js", "--topic", slug, "--cache", "--cache-ttl-days", "7"]);
+      assert.equal(result.status, 1);
+      assert.doesNotMatch(result.stdout, /CACHE_OK/);
+      assert.match(result.stdout, /BLOCKED_PRIVATE_NETWORK/);
+    });
   } finally {
     fs.rmSync(topicDir, { recursive: true, force: true });
   }

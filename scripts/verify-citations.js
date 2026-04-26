@@ -62,6 +62,8 @@ Usage:
   node scripts/verify-citations.js --all --concurrency 5 --cache --cache-ttl-days 7
                                                                Verify with bounded concurrency and TTL cache
 
+Cache is bypassed by omitting --cache. Cached entries expire according to --cache-ttl-days.
+
 --claim-check: For each reachable URL, fetches the page body (up to 50KB) and checks whether
 significant terms from the citation's link text appear in the content. Reports CLAIM-PRESENT,
 CLAIM-ABSENT, or CLAIM-UNVERIFIABLE (when link text is too short to verify meaningfully).
@@ -100,6 +102,40 @@ function writeCache(cache) {
   if (!cacheMode) return;
   fs.mkdirSync(META_DIR, { recursive: true });
   fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
+}
+
+function cacheEntryFromResult(url, today, result) {
+  const normalizedResult = {
+    ...result,
+    url: result.url || url,
+    final_url: result.final_url || url,
+  };
+
+  return {
+    url,
+    checked_on: today,
+    final_url: normalizedResult.final_url,
+    status: normalizedResult.status,
+    http_code: normalizedResult.http_code ?? null,
+    error_class: citationCountKey(normalizedResult.status),
+    result: normalizedResult,
+  };
+}
+
+function cachedResultFromEntry(entry, today) {
+  if (!isCacheFresh(entry, today)) return null;
+  if (entry.result) return entry.result;
+  if (!entry.status || !entry.url) return null;
+
+  return {
+    url: entry.url,
+    source_file: '',
+    final_url: entry.final_url || entry.url,
+    http_code: entry.http_code ?? null,
+    method_used: entry.method_used ?? null,
+    status: entry.status,
+    note: entry.note,
+  };
 }
 
 async function mapLimit(items, limit, mapper) {
@@ -455,6 +491,12 @@ function extractUrls(content, fileName) {
 async function verifyTopic(slug) {
   const topicDir = path.join(TOPICS_DIR, slug);
   const today = new Date().toISOString().slice(0, 10);
+  const cacheStats = {
+    cache_enabled: cacheMode && !claimCheckMode,
+    cache_ttl_days: cacheTtlDays,
+    cache_hits: 0,
+    cache_misses: 0,
+  };
 
   // Guard: check topic has published files
   const existingFiles = PUBLISHED_FILES.filter(f => fs.existsSync(path.join(topicDir, f)));
@@ -472,7 +514,7 @@ async function verifyTopic(slug) {
 
   if (allUrls.length === 0) {
     console.log(`[${slug}] No URLs found in published files.`);
-    return buildReport(slug, today, []);
+    return buildReport(slug, today, [], cacheStats);
   }
 
   console.log(`[${slug}] Checking ${allUrls.length} URLs...`);
@@ -484,12 +526,12 @@ async function verifyTopic(slug) {
   await mapLimit(uniqueUrls, concurrency, async (url) => {
     process.stdout.write(`  ${url.slice(0, 80)}... `);
     const cacheEntry = citationCache[url];
-    const cached = cacheMode && !claimCheckMode && isCacheFresh(cacheEntry, today)
-      ? cacheEntry.result
-      : null;
+    const cached = cacheStats.cache_enabled ? cachedResultFromEntry(cacheEntry, today) : null;
+    if (cached) cacheStats.cache_hits += 1;
+    else if (cacheStats.cache_enabled) cacheStats.cache_misses += 1;
     const result = cached || await checkUrl(url, '');
-    if (cacheMode && !claimCheckMode) {
-      citationCache[url] = { checked_on: today, result };
+    if (!cached && cacheStats.cache_enabled) {
+      citationCache[url] = cacheEntryFromResult(url, today, result);
     }
     checkResults.set(url, result);
     console.log(`${cached ? 'CACHE_' : ''}${result.status}` + (result.http_code ? ` (${result.http_code})` : ''));
@@ -535,10 +577,10 @@ async function verifyTopic(slug) {
     };
   });
 
-  return buildReport(slug, today, results);
+  return buildReport(slug, today, results, cacheStats);
 }
 
-function buildReport(slug, date, results) {
+function buildReport(slug, date, results, cacheStats = {}) {
   const counts = Object.fromEntries(CITATION_COUNT_KEYS.map(key => [key, 0]));
   for (const r of results) {
     counts[citationCountKey(r.status)] += 1;
@@ -556,6 +598,7 @@ function buildReport(slug, date, results) {
     topic_slug: slug,
     checked_on: date,
     total_urls: results.length,
+    ...cacheStats,
     ...counts,
     ...(claimCheckMode ? claimCounts : {}),
     results,
