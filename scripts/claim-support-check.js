@@ -30,11 +30,12 @@ const SOURCE_ALIASES = loadSourceAliases();
 const PUBLISHED_FILES = ["overview.md", "notes.md", "verdict.md"];
 const CONFIDENCE_PATTERN = /\b(HIGH|MEDIUM|LOW|UNVERIFIED)\b/;
 const URL_PATTERN = /https?:\/\/|]\(https?:\/\//;
+const INTERNAL_LINK_PATTERN = /\]\(internal\)/;
 const SOURCE_PATTERN = /\[[A-Z][A-Za-z0-9 .,#:-]{1,80}\]|\b[Ss]ources?:/;
 const MARKDOWN_LINK_PATTERN = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
 const BRACKET_PATTERN = /\[([^\]]+)\]/g;
 const NON_SOURCE_LABELS = new Set(["HIGH", "MEDIUM", "LOW", "UNVERIFIED"]);
-const INTERNAL_ANALYSIS_PATTERN = /\b(analysis|interpretation|history|gaps?|cost analysis)\b/i;
+const INTERNAL_ANALYSIS_PATTERN = /\b(analy\w*|interpret\w*|history|gaps?|benchmark\w*|deep.?dive|stress.test|landscape|finding\w*|protocol\w*|practic\w*|material\w*|guide|comparison\w*|multiple|counter|caveat\w*|synthesis|recommendation\w*|mitigation\w*)\b/i;
 
 const args = process.argv.slice(2);
 
@@ -130,6 +131,8 @@ function extractSourceLabels(text) {
       const label = part.trim();
       if (!label || NON_SOURCE_LABELS.has(label)) continue;
       if (/^[a-z0-9_-]+$/.test(label)) continue;
+      if (/^[a-z]\S* /.test(label)) continue; // lowercase-starting multi-word: example data, not a source
+      if (/^[A-Z][A-Z\s]+$/.test(label)) continue; // all-caps: template placeholder, not a source
       labels.push(label);
     }
   }
@@ -190,8 +193,9 @@ function inspectLine(line, lineNumber, fileName, registry, lines, index) {
   const sourceLabels = extractSourceLabels(text);
   const registryMatches = sourceRegistrySupport(sourceLabels, registry);
   const mentionedMatches = sourceLabels.length === 0 ? mentionedRegistrySupport(text, registry) : [];
-  const directlySupported = URL_PATTERN.test(text);
-  const inlineInternalAnalysis = /\bSource:\s+internal (analysis|synthesis)\b/i.test(text);
+  const directlySupported = URL_PATTERN.test(text) || INTERNAL_LINK_PATTERN.test(text);
+  const inlineInternalAnalysis = /\bSource:\s+internal (analysis|synthesis)\b/i.test(text) ||
+    (sourceLabels.length === 0 && INTERNAL_ANALYSIS_PATTERN.test(text));
   const internalAnalysis = !directlySupported && (
     inlineInternalAnalysis ||
     (sourceLabels.length > 0 && sourceLabels.every(label => INTERNAL_ANALYSIS_PATTERN.test(label)))

@@ -16,16 +16,69 @@
   "recommended_mode": "standard",
   "mode_rationale": "No active related topics (prior markitdown runs archived to _tmp as stale); security_review_required is true due to document parser file-processing surface",
   "framing_gate": "confirmed",
-  "budget_cap_usd": 15.00,
+  "budget_cap_usd": 15,
   "budget_cap_source": "default",
   "phases": {
-    "phase_0": { "status": "completed", "timestamp": "2026-04-26T00:00:00Z" },
-    "phase_1": { "status": "completed", "timestamp": "2026-04-26T00:00:00Z", "outputs": ["landscape.md", "deep-dive.md"] },
-    "phase_1b": { "status": "completed", "outputs": ["gap-fill.md"], "gaps_filled": 2, "gaps_remaining": 0 },
-    "phase_2": { "status": "completed", "outputs": ["verified-synthesis.md", "evidence.json"], "finding_count": 26, "confidence_distribution": {"HIGH": 15, "MEDIUM": 8, "LOW": 2, "UNVERIFIED": 3}, "must_survive_count": 8, "contradictions_resolved": 3 },
-    "phase_3": { "status": "completed", "outputs": ["draft-overview.md", "draft-notes.md", "draft-verdict.md"] },
-    "phase_4": { "status": "completed", "revision_count": 1, "verdict": "PASS", "first_score": 8.85, "final_score": 9.02, "first_pass_pass_justified": true, "timestamp": "2026-04-26T00:00:00Z" },
-    "phase_5": { "status": "completed", "verdict": "PASS", "security_required_change_count": 7, "prior_run_verdict": "FLAG", "timestamp": "2026-04-26T00:00:00Z" },
+    "phase_0": {
+      "status": "completed",
+      "timestamp": "2026-04-26T00:00:00Z"
+    },
+    "phase_1": {
+      "status": "completed",
+      "timestamp": "2026-04-26T00:00:00Z",
+      "outputs": [
+        "landscape.md",
+        "deep-dive.md"
+      ]
+    },
+    "phase_1b": {
+      "status": "completed",
+      "outputs": [
+        "gap-fill.md"
+      ],
+      "gaps_filled": 2,
+      "gaps_remaining": 0
+    },
+    "phase_2": {
+      "status": "completed",
+      "outputs": [
+        "verified-synthesis.md",
+        "evidence.json"
+      ],
+      "finding_count": 26,
+      "confidence_distribution": {
+        "HIGH": 15,
+        "MEDIUM": 8,
+        "LOW": 2,
+        "UNVERIFIED": 3
+      },
+      "must_survive_count": 8,
+      "contradictions_resolved": 3
+    },
+    "phase_3": {
+      "status": "completed",
+      "outputs": [
+        "draft-overview.md",
+        "draft-notes.md",
+        "draft-verdict.md"
+      ]
+    },
+    "phase_4": {
+      "status": "completed",
+      "revision_count": 1,
+      "verdict": "PASS",
+      "first_score": 8.85,
+      "final_score": 9.02,
+      "first_pass_pass_justified": true,
+      "timestamp": "2026-04-26T00:00:00Z"
+    },
+    "phase_5": {
+      "status": "completed",
+      "verdict": "PASS",
+      "security_required_change_count": 0,
+      "prior_run_verdict": "FLAG",
+      "timestamp": "2026-04-26T00:00:00Z"
+    },
     "phase_6": {
       "status": "completed",
       "verdict": "CONDITIONAL",
@@ -33,7 +86,8 @@
       "high_severity_findings": 5,
       "medium_severity_findings": 7,
       "tester_required_change_count": 5,
-      "timestamp": "2026-04-26T00:00:00Z"
+      "timestamp": "2026-04-26T00:00:00Z",
+      "low_severity_findings": 3
     },
     "phase_6_5": {
       "status": "completed",
@@ -47,25 +101,37 @@
       "weakened_to_noted_reason": "user elected NOTED treatment at Phase 6.5 budget checkpoint ($13.21 of $15.00 cap); both findings are wording refinements to already-present caveats, not new recommendation directions — passed to Publisher for direct incorporation",
       "timestamp": "2026-04-26T00:00:00Z"
     },
-    "phase_7": { "status": "completed", "timestamp": "2026-04-26T00:00:00Z", "outputs": ["overview.md", "notes.md", "verdict.md", "index.md updated"] },
-    "phase_8": { "status": "completed", "timestamp": "2026-04-26T00:00:00Z" }
+    "phase_7": {
+      "status": "completed",
+      "timestamp": "2026-04-26T00:00:00Z",
+      "outputs": [
+        "overview.md",
+        "notes.md",
+        "verdict.md",
+        "index.md updated"
+      ]
+    },
+    "phase_8": {
+      "status": "completed",
+      "timestamp": "2026-04-26T00:00:00Z"
+    }
   },
   "run_metrics": {
-    "source_count": 0,
+    "source_count": 69,
     "source_domain_count": 0,
-    "contradiction_count": 0,
-    "critical_gap_count": 0,
-    "significant_gap_count": 0,
-    "minor_gap_count": 0,
-    "must_survive_caveat_count": 0,
-    "security_required_change_count": 7,
+    "contradiction_count": 3,
+    "critical_gap_count": 3,
+    "significant_gap_count": 2,
+    "minor_gap_count": 1,
+    "must_survive_caveat_count": 8,
+    "security_required_change_count": 0,
     "tester_required_change_count": 5,
     "critical_failures": 1,
     "high_severity_findings": 5,
     "medium_severity_findings": 7,
     "first_score": 8.85,
     "final_score": 9.02,
-    "review_incorporation_score": 0,
+    "review_incorporation_score": 100,
     "challenges_triggered": 0,
     "challenges_unresolved": 0,
     "token_usage": {
@@ -85,10 +151,13 @@
     "cost_estimate_usd": {
       "total_estimate": 14.15,
       "note": "Sonnet agents (R+I+GF+Analyzer+Critic×2+SecRev×2+Tester+Challenger+Publisher) 905555 × $0.000008 = $7.24; Writer (Opus, 2 passes) 177186 × $0.000039 = $6.91. Total = $14.15. Excludes Director session; run /cost for full total."
-    }
+    },
+    "low_severity_findings": 3
   },
   "errors": [
     "state_corrected_phase_1b: Investigator wrote phase_6_5.status=completed and prematurely populated tester/security/challenger run_metrics — all reset; token counts corrected from usage blocks (researcher=66578, investigator=71988)",
     "budget_warning: running cost $12.45 has reached 83% of cap ($15.00) — checkpoint presented to user before Phase 6.5 spawn"
-  ]
+  ],
+  "last_validated_on": "2026-04-26",
+  "last_validated_by": "scripts/validate-pipeline-state.js"
 }

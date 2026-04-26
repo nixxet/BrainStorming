@@ -1,4 +1,5 @@
 {
+  "schema_version": "1",
   "topic_slug": "markitdown",
   "generated_on": "2026-04-26",
   "finding_count": 26,
@@ -243,7 +244,7 @@
     {
       "id": "F15",
       "title": "CRITICAL: MarkItDown v0.1.5 does NOT patch GHSA-f83h-ghpp-7wcc",
-      "confidence": "CRITICAL",
+      "confidence": "HIGH",
       "summary": "MarkItDown v0.1.5 pins pdfminer.six 20251107 to patch CVE-2025-64512. However, GHSA-f83h-ghpp-7wcc requires pdfminer.six >=20251230 (replaces pickle with JSON). Current v0.1.5 is unpatched for second vulnerability.",
       "source_count": 3,
       "source_independence": "independent",

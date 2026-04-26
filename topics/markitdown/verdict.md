@@ -22,7 +22,7 @@ MarkItDown is fit-for-purpose within its narrow design scope: English-language, 
 - Any pipeline requiring accurate table structure preservation. Table extraction uses column-wise enumeration, rendering tables unusable for downstream analysis [HIGH confidence, applies to all formats].
 - Multilingual or non-English documents. The tool crashes on Cyrillic, CJK, and special Unicode [HIGH confidence, multiple GitHub issues].
 - Legal document analysis, financial data extraction, or healthcare records processing where table structure or structured data preservation is required [HIGH confidence, architectural limitation].
-- User-uploaded or untrusted document processing without sandboxing, privilege isolation, and pdfminer.six >= 20251230 patch [CRITICAL, GHSA-f83h-ghpp-7wcc].
+- User-uploaded or untrusted document processing without sandboxing, privilege isolation, and pdfminer.six >= 20251230 patch [CRITICAL, [GHSA-f83h-ghpp-7wcc](https://github.com/advisories/GHSA-f83h-ghpp-7wcc)].
 
 ## What It Is Not
 
