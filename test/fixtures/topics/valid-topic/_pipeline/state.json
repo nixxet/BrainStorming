@@ -1,0 +1,17 @@
+{
+  "topic_slug": "valid-topic",
+  "topic_name": "Fixture Valid Topic",
+  "workflow": "evaluate",
+  "current_date": "2026-04-24",
+  "phases": {
+    "phase_4": {
+      "status": "completed",
+      "verdict": "PASS",
+      "final_score": 8.5
+    }
+  },
+  "run_metrics": {
+    "final_score": 8.5
+  },
+  "errors": []
+}

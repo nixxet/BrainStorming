@@ -4,7 +4,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const test = require("node:test");
 
+const { parseFrontmatter } = require("../scripts/lib/topic-utils");
+
 const repoRoot = path.resolve(__dirname, "..");
+const fixtureRoot = path.join(__dirname, "fixtures", "topics");
 
 function run(args) {
   return spawnSync(process.execPath, args, {
@@ -12,6 +15,23 @@ function run(args) {
     encoding: "utf8",
   });
 }
+
+function installFixtureTopic(slug) {
+  const source = path.join(fixtureRoot, slug);
+  const target = path.join(repoRoot, "topics", slug);
+  fs.rmSync(target, { recursive: true, force: true });
+  fs.cpSync(source, target, { recursive: true });
+  return target;
+}
+
+test("frontmatter parser handles fixture markdown with CRLF line endings", () => {
+  const fixturePath = path.join(fixtureRoot, "valid-topic", "overview.md");
+  const content = fs.readFileSync(fixturePath, "utf8").replace(/\n/g, "\r\n");
+  const frontmatter = parseFrontmatter(content);
+
+  assert.equal(frontmatter.title, "Fixture Valid Topic - Overview");
+  assert.equal(frontmatter.created, "2026-04-24");
+});
 
 test("check-staleness --json emits parseable topic freshness data", () => {
   const result = run(["scripts/check-staleness.js", "--json"]);
@@ -92,6 +112,23 @@ test("validate-pipeline-state repair previews before writing", () => {
   }
 });
 
+test("validate-pipeline-state reports malformed fixture state", () => {
+  const slug = "malformed-state";
+  const topicDir = installFixtureTopic(slug);
+
+  try {
+    const result = run(["scripts/validate-pipeline-state.js", "--topic", slug, "--json"]);
+    assert.equal(result.status, 0, result.stderr);
+
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.topicsChecked, 1);
+    assert.equal(payload.topicsWithIssues, 1);
+    assert.match(payload.results[0].issues.join("\n"), /Unreadable state\.json/);
+  } finally {
+    fs.rmSync(topicDir, { recursive: true, force: true });
+  }
+});
+
 test("schema validator accepts current topic state and evidence contracts", () => {
   const result = run(["scripts/validate-schemas.js"]);
   assert.equal(result.status, 0, result.stderr);
@@ -110,16 +147,10 @@ test("public export excludes private pipeline and meta artifacts", () => {
 });
 
 test("citation checker blocks private network URLs", () => {
-  const slug = "citation-safety-test";
-  const topicDir = path.join(repoRoot, "topics", slug);
-  fs.rmSync(topicDir, { recursive: true, force: true });
-  fs.mkdirSync(topicDir, { recursive: true });
+  const slug = "broken-citation-topic";
+  const topicDir = installFixtureTopic(slug);
 
   try {
-    fs.writeFileSync(path.join(topicDir, "overview.md"), "# Citation Safety\n\n[private](http://127.0.0.1/secret)\n", "utf8");
-    fs.writeFileSync(path.join(topicDir, "notes.md"), "# Notes\n", "utf8");
-    fs.writeFileSync(path.join(topicDir, "verdict.md"), "# Verdict\n", "utf8");
-
     const result = run(["scripts/verify-citations.js", "--topic", slug, "--cache", "--cache-ttl-days", "7"]);
     assert.equal(result.status, 1);
     assert.match(result.stdout, /BLOCKED_PRIVATE_NETWORK/);
