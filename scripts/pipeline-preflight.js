@@ -6,6 +6,8 @@ purpose: Verify a topic is ready for a pipeline run before any research work sta
 
 const fs = require("fs");
 const path = require("path");
+const { isReservedTopicName, isValidTopicSlug, topicDir: resolveTopicDir } = require("./lib/safe-paths");
+const { readPipelineState } = require("./lib/pipeline-state");
 const { runNodeScript } = require("./lib/process-runner");
 
 const repoRoot = path.resolve(__dirname, "..");
@@ -55,18 +57,11 @@ function parseArgs(argv) {
   return args;
 }
 
-const RESERVED = new Set(["_meta", "_cross", "_tmp"]);
 const VALID_MODES = new Set(["research", "quick", "compare", "evaluate", "recommend"]);
 
 function readIfExists(p) {
   if (!fs.existsSync(p)) return null;
   return fs.readFileSync(p, "utf8");
-}
-
-function parseJsonIfExists(p) {
-  const raw = readIfExists(p);
-  if (!raw) return null;
-  try { return JSON.parse(raw); } catch { return null; }
 }
 
 function indexStatus(slug) {
@@ -81,8 +76,7 @@ function isWritable(dir) {
 }
 
 function detectIncompleteRun(topicDir) {
-  const statePath = path.join(topicDir, "_pipeline", "state.json");
-  const state = parseJsonIfExists(statePath);
+  const { state } = readPipelineState(topicDir);
   if (!state) return null;
 
   const phases = [0, 1, 2, 3, 4, 5, 6, 7].map((n) => `phase_${n}`);
@@ -143,11 +137,11 @@ function main() {
   }
 
   // 1. Reserved slug check
-  check("slug-not-reserved", "FATAL", !RESERVED.has(args.slug),
+  check("slug-not-reserved", "FATAL", !isReservedTopicName(args.slug),
     `"${args.slug}" is a reserved folder name. Choose a different slug.`);
 
   // 2. Slug format
-  check("slug-format", "FATAL", /^[a-z0-9]+(-[a-z0-9]+)*$/.test(args.slug),
+  check("slug-format", "FATAL", isValidTopicSlug(args.slug),
     `Slug must be kebab-case (lowercase letters, digits, hyphens). Got: "${args.slug}"`);
 
   // 3. Mode validity
@@ -164,7 +158,7 @@ function main() {
     process.exit(1);
   }
 
-  const topicDir = path.join(topicsRoot, args.slug);
+  const topicDir = resolveTopicDir(topicsRoot, args.slug);
   const topicExists = fs.existsSync(topicDir);
 
   // 5. Topic existence + incomplete run detection

@@ -6,6 +6,8 @@ const test = require("node:test");
 
 const { parseFrontmatter } = require("../scripts/lib/topic-utils");
 const { parseMarkdownRow, parseRowsAfterHeader } = require("../scripts/lib/markdown-table");
+const { readPipelineState } = require("../scripts/lib/pipeline-state");
+const { isValidTopicSlug, resolveInside, statePathForTopic } = require("../scripts/lib/safe-paths");
 
 const repoRoot = path.resolve(__dirname, "..");
 const fixtureRoot = path.join(__dirname, "fixtures", "topics");
@@ -49,6 +51,12 @@ test("markdown table helper parses rows after a matching header", () => {
   assert.equal(rows[0].lineIndex, 2);
 });
 
+test("safe path helper rejects escaping paths and validates topic slugs", () => {
+  assert.equal(isValidTopicSlug("valid-topic-1"), true);
+  assert.equal(isValidTopicSlug("../escape"), false);
+  assert.throws(() => resolveInside(path.join(repoRoot, "topics"), "..", "README.md"), /escapes root/);
+});
+
 test("check-staleness --json emits parseable topic freshness data", () => {
   const result = run(["scripts/check-staleness.js", "--json"]);
   assert.equal(result.status, 0, result.stderr);
@@ -74,7 +82,7 @@ test("validate-pipeline-state repair previews before writing", () => {
   const slug = "state-repair-test";
   const topicDir = path.join(repoRoot, "topics", slug);
   const pipelineDir = path.join(topicDir, "_pipeline");
-  const statePath = path.join(pipelineDir, "state.json");
+  const statePath = statePathForTopic(topicDir);
 
   fs.rmSync(topicDir, { recursive: true, force: true });
   fs.mkdirSync(pipelineDir, { recursive: true });
@@ -123,6 +131,7 @@ test("validate-pipeline-state repair previews before writing", () => {
     assert.equal(repaired.phases.phase_4.status, "completed");
     assert.equal(repaired.phases.phase_4.final_score, 8.25);
     assert.equal(repaired.run_metrics.final_score, 8.25);
+    assert.equal(readPipelineState(topicDir).state.phases.phase_4.status, "completed");
   } finally {
     fs.rmSync(topicDir, { recursive: true, force: true });
   }

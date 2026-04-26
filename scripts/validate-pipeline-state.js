@@ -9,6 +9,19 @@ purpose: Audit each topic's _pipeline/state.json against on-disk revision drafts
 
 const fs = require("fs");
 const path = require("path");
+const {
+  evidencePathForTopic,
+  listTopicDirs,
+  pipelineDirForTopic,
+  topicDir: resolveTopicDir,
+} = require("./lib/safe-paths");
+const {
+  ensureObject,
+  readJsonFile,
+  readPipelineState,
+  readTextIfExists,
+  writePipelineState,
+} = require("./lib/pipeline-state");
 
 const repoRoot = path.resolve(__dirname, "..");
 const topicsRoot = path.join(repoRoot, "topics");
@@ -57,30 +70,12 @@ Options:
 `);
 }
 
-function readIfExists(filePath) {
-  if (!fs.existsSync(filePath)) {
-    return null;
-  }
-  return fs.readFileSync(filePath, "utf8");
-}
-
 function parseJsonIfExists(filePath) {
-  const raw = readIfExists(filePath);
-  if (raw == null) {
+  const parsed = readJsonFile(filePath);
+  if (parsed.raw == null) {
     return null;
   }
-  try {
-    return JSON.parse(raw);
-  } catch (error) {
-    return { __parseError: error.message, __raw: raw };
-  }
-}
-
-function ensureObject(target, key, fallback = {}) {
-  if (!target[key] || typeof target[key] !== "object" || Array.isArray(target[key])) {
-    target[key] = fallback;
-  }
-  return target[key];
+  return parsed.parseError ? { __parseError: parsed.parseError, __raw: parsed.raw } : parsed.data;
 }
 
 function extractFirstNumber(text, patterns) {
@@ -236,13 +231,14 @@ function extractEvidenceMetrics(evidence) {
 
 function validateTopic(topicDir, options) {
   const slug = path.basename(topicDir);
-  const pipelineDir = path.join(topicDir, "_pipeline");
-  const statePath = path.join(pipelineDir, "state.json");
+  const stateInfo = readPipelineState(topicDir);
+  const pipelineDir = stateInfo.pipelineDir;
+  const statePath = stateInfo.statePath;
 
   const result = {
     slug,
     statePath,
-    exists: fs.existsSync(pipelineDir),
+    exists: stateInfo.exists,
     issues: [],
     appliedFixes: [],
     warnings: [],
@@ -254,13 +250,13 @@ function validateTopic(topicDir, options) {
   }
 
   const fileNames = fs.readdirSync(pipelineDir);
-  const state = parseJsonIfExists(statePath);
-  if (!state) {
+  const state = stateInfo.state;
+  if (!state && !stateInfo.parseError) {
     result.issues.push("Missing state.json");
     return result;
   }
-  if (state.__parseError) {
-    result.issues.push(`Unreadable state.json: ${state.__parseError}`);
+  if (stateInfo.parseError) {
+    result.issues.push(`Unreadable state.json: ${stateInfo.parseError}`);
     return result;
   }
 
@@ -286,7 +282,7 @@ function validateTopic(topicDir, options) {
     }
   }
 
-  const scorecardText = readIfExists(path.join(pipelineDir, "scorecard.md"));
+  const scorecardText = readTextIfExists(path.join(pipelineDir, "scorecard.md"));
   if (scorecardText) {
     const weightedTotal = extractFirstNumber(scorecardText, [
       /<weighted_total>([0-9]+(?:\.[0-9]+)?)<\/weighted_total>/i,
@@ -337,7 +333,7 @@ function validateTopic(topicDir, options) {
     }
   }
 
-  const securityReviewText = readIfExists(path.join(pipelineDir, "security-review.md"));
+  const securityReviewText = readTextIfExists(path.join(pipelineDir, "security-review.md"));
   if (securityReviewText) {
     const verdict = extractVerdict(securityReviewText);
     const requiredChangeCount = extractRequiredChangeCount(securityReviewText);
@@ -367,7 +363,7 @@ function validateTopic(topicDir, options) {
     }
   }
 
-  const stressTestText = readIfExists(path.join(pipelineDir, "stress-test.md"));
+  const stressTestText = readTextIfExists(path.join(pipelineDir, "stress-test.md"));
   if (stressTestText) {
     const verdict = extractVerdict(stressTestText);
     const requiredChangeCount = extractRequiredChangeCount(stressTestText);
@@ -408,7 +404,7 @@ function validateTopic(topicDir, options) {
     }
   }
 
-  const evidence = parseJsonIfExists(path.join(pipelineDir, "evidence.json"));
+  const evidence = parseJsonIfExists(evidencePathForTopic(topicDir));
   if (evidence && !evidence.__parseError) {
     const evidenceMetrics = extractEvidenceMetrics(evidence);
     const pairs = [
@@ -453,7 +449,7 @@ function validateTopic(topicDir, options) {
     const stamp = new Date().toISOString().slice(0, 10);
     state.last_validated_on = stamp;
     state.last_validated_by = "scripts/validate-pipeline-state.js";
-    fs.writeFileSync(statePath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+    writePipelineState(statePath, state);
   }
 
   return result;
@@ -461,18 +457,14 @@ function validateTopic(topicDir, options) {
 
 function getTopicDirs(topicArg) {
   if (topicArg) {
-    const singleTopic = path.join(topicsRoot, topicArg);
+    const singleTopic = resolveTopicDir(topicsRoot, topicArg);
     if (!fs.existsSync(singleTopic) || !fs.statSync(singleTopic).isDirectory()) {
       throw new Error(`Topic not found: ${topicArg}`);
     }
     return [singleTopic];
   }
 
-  return fs
-    .readdirSync(topicsRoot)
-    .map((entry) => path.join(topicsRoot, entry))
-    .filter((entryPath) => fs.statSync(entryPath).isDirectory())
-    .filter((entryPath) => !path.basename(entryPath).startsWith("_"));
+  return listTopicDirs(topicsRoot);
 }
 
 function main() {
