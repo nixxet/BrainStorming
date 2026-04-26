@@ -6,11 +6,12 @@ const path = require("node:path");
 const RESERVED_TOPIC_PREFIX = "_";
 
 function parseFrontmatter(content) {
-  const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const normalized = content.replace(/\r/g, "");
+  const match = normalized.match(/^---([\s\S]*?)\n---/);
   if (!match) return {};
 
   const result = {};
-  for (const line of match[1].split(/\r?\n/)) {
+  for (const line of match[1].split("\n")) {
     const parsed = line.match(/^(\w[\w_-]*):\s*(.*)$/);
     if (!parsed) continue;
     let value = parsed[2].trim();

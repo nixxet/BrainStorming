@@ -5,9 +5,28 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const { listTopicSlugs } = require("./lib/topic-utils");
+const { isValidTopicSlug } = require("./lib/safe-paths");
 
 const ROOT = path.join(__dirname, "..");
 const TOPICS_DIR = path.join(ROOT, "topics");
+const ALIAS_CONFIG_PATH = path.join(__dirname, "config", "source-aliases.json");
+
+function loadSourceAliases() {
+  try {
+    const raw = fs.readFileSync(ALIAS_CONFIG_PATH, "utf8");
+    const data = JSON.parse(raw);
+    const result = {};
+    for (const [fragment, aliases] of Object.entries(data)) {
+      if (fragment.startsWith("_")) continue;
+      result[fragment] = Array.isArray(aliases) ? aliases : [aliases];
+    }
+    return result;
+  } catch {
+    return {};
+  }
+}
+
+const SOURCE_ALIASES = loadSourceAliases();
 const PUBLISHED_FILES = ["overview.md", "notes.md", "verdict.md"];
 const CONFIDENCE_PATTERN = /\b(HIGH|MEDIUM|LOW|UNVERIFIED)\b/;
 const URL_PATTERN = /https?:\/\/|]\(https?:\/\//;
@@ -75,10 +94,12 @@ function aliasesForLabel(label) {
   if (normalized.includes("semver")) aliases.add("semver");
   if (normalized.includes("pyproject")) aliases.add("pyproject toml");
   if (normalized.includes("dev community")) aliases.add("dev community");
-  if (normalized.includes("systenics")) aliases.add("systenics");
-  if (normalized.includes("procycons")) aliases.add("procycons");
-  if (normalized.includes("chatforest")) aliases.add("chatforest");
-  if (normalized.includes("bluerock")) aliases.add("bluerock");
+
+  for (const [fragment, aliasValues] of Object.entries(SOURCE_ALIASES)) {
+    if (normalized.includes(fragment)) {
+      for (const alias of aliasValues) aliases.add(alias);
+    }
+  }
 
   return [...aliases].filter(Boolean);
 }
@@ -222,6 +243,11 @@ function checkTopic(slug) {
     needs_review: needsReview.length,
     findings: needsReview,
   };
+}
+
+if (topic && !isValidTopicSlug(topic)) {
+  console.error(`Error: invalid topic slug "${topic}" — slugs must be lowercase alphanumeric and hyphens only`);
+  process.exit(1);
 }
 
 const slugs = allMode ? listTopicSlugs(TOPICS_DIR) : [topic];

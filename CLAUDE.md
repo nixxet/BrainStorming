@@ -42,6 +42,25 @@ When the user message matches one of these patterns, read `.claude/agents/direct
 | `cross-analyze <theme>` | cross-analyze |
 | `verify citations [slug\|all]` | verify citations |
 | `refresh-stale` | staleness check plus re-research |
+| `diagnose <topic-slug>` | run diagnose-run.js for a topic and report |
+
+## Cross-Analyze Workflow
+
+`/cross-analyze` runs the `cross-analyzer` agent (`.claude/agents/cross-analyzer.md`) to synthesize patterns across all topics in a theme area.
+
+**When to use:** After 3+ related topics have been published (e.g., document-conversion tools, LLM SDKs, auth libraries). Cross-analysis surfaces shared risks, recurring trade-offs, and complementary patterns that individual topic verdicts cannot capture.
+
+**How it relates to individual topics:** Cross-analysis findings are written to `topics/_cross/{theme}/cross-analysis.md`. They do not modify individual topic verdicts but may surface invalidation candidates (e.g., "all three tools share dependency X, which has a known CVE"). If cross-analysis reveals a material issue, re-run the relevant topic via the standard pipeline.
+
+**Output:** A `cross-analysis.md` report with: shared patterns, diverging factors, cross-topic risks, and recommended topic re-evaluation candidates. This file is not included in `dist/public/` unless explicitly exported.
+
+## Resuming an Interrupted Pipeline
+
+If a pipeline run is interrupted, re-invoke the same skill for the same topic. The Director reads `_pipeline/state.json` and skips already-completed phases automatically.
+
+If the state file is corrupt or inconsistent: `npm run validate-pipeline-state:repair -- --topic {slug}`.
+
+For diagnostic output: `npm run diagnose-run -- --topic {slug}`.
 
 ## Quality Standard
 
@@ -81,7 +100,11 @@ Optional private or local pipeline artifacts should stay out of public mirrors u
 - Use `scripts/regenerate-index.js` only to repair or rebuild indexes.
 - Use `scripts/verify-citations.js` to check URL reachability.
 - Use `scripts/check-staleness.js` to flag topics that need refresh.
+- Use `scripts/diagnose-run.js --topic {slug}` to diagnose a stalled or failed pipeline run.
+- Use `scripts/lint-agents.js` to validate all agent spec files for structural integrity.
+- Use `scripts/prune-citation-cache.js` to remove stale citation cache entries.
 - Before public release, run secret scanning and text searches for private identifiers.
+- To add source label aliases for a topic, edit `scripts/config/source-aliases.json`.
 
 ---
 

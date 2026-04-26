@@ -97,7 +97,23 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 | `npm run check-staleness:report` | Flag stale topics by decay class |
 | `npm run topic-init` | Scaffold a new topic folder |
 | `npm run topic-validate:all` | Validate published topic structure |
-| `npm run export:public` | Create a sanitized public export under `dist/public/` |
+| `npm run export:public` | Create a sanitized public export under `dist/public/` (also emits `dist/public/index.json`) |
+| `npm run lint:agents` | Lint all agent spec files for required frontmatter and sections |
+| `npm run diagnose-run -- --topic {slug}` | Diagnose a stalled or failed pipeline run, with recovery suggestions |
+| `npm run diagnose-run:all` | Diagnose pipeline status for all topics |
+| `npm run prune-citation-cache` | Remove citation cache entries older than 180 days |
+| `npm run prune-citation-cache:dry` | Preview citation cache pruning without writing |
+
+## Resuming an Interrupted Pipeline
+
+If a pipeline run is interrupted (agent error, budget exhaustion, session disconnect), the Director writes the current phase to `_pipeline/state.json`. Resuming is safe and automatic:
+
+1. **Check pipeline status:** `npm run diagnose-run -- --topic {slug}` — shows which phases completed, which failed, and what to do next.
+2. **Re-invoke the pipeline skill** for the same topic using the same workflow (e.g., `/evaluate {topic}`). The Director reads the existing state and skips already-completed phases.
+3. **If state.json is corrupt** (parse error or impossible state): `npm run validate-pipeline-state:repair -- --topic {slug}` will apply safe derived repairs.
+4. **If the run is fully stuck** (all phases pending despite artifacts existing): run `npm run validate-pipeline-state:repair` to sync state from on-disk artifacts, then re-invoke.
+
+For detailed recovery guidance, see [docs/recovery.md](docs/recovery.md).
 
 ## Quickstart
 

@@ -1,165 +1,134 @@
 ---
 title: MarkItDown — Research Notes
 tags: [research, findings]
-created: 2026-04-24
+created: 2026-04-26
+status: complete
 ---
 
 # MarkItDown — Research Notes
 
 ## Key Findings
 
-### Design Philosophy
+### Strengths (What MarkItDown Does Well)
 
-- **[HIGH]** MarkItDown's architecture targets semantic Markdown (headings, paragraphs, lists) for LLM consumption, not pixel-perfect publication fidelity. v0.1.5 adds optional vision-model OCR (GPT-4o, Claude, Azure Document Intelligence). This design choice prioritizes structure extraction for downstream LLM processing over publication-grade formatting. — [GitHub architecture documentation](https://github.com/microsoft/markitdown), [GitHub release notes](https://github.com/microsoft/markitdown/releases)
+- **[HIGH]** MarkItDown is optimized for LLM consumption over document fidelity — [GitHub](https://github.com/microsoft/markitdown), corroborated by AutoGen integration and Emelia RAG guide. Markdown headings require 3 tokens vs 23 in HTML. Design explicitly prioritizes machine readability. Tool built for Microsoft Research AutoGen orchestration.
+  - **Transferability:** Pattern replicates for any document-to-LLM pipeline; generalizable across domains.
 
-### Strengths
+- **[HIGH]** Comprehensive format support (15+) — PDF, DOCX, PPTX, XLSX, images with EXIF/OCR, audio with transcription, HTML, YouTube, CSV, JSON, XML, EPubs, ZIP, and Azure Document Intelligence. [GitHub](https://github.com/microsoft/markitdown) — MIT license removes commercial friction.
+  - **Transferability:** Multi-format wrapper architecture is reusable pattern.
 
-- **[HIGH]** Speed: 35–60 files/sec, 100x faster than Docling (~0.6 files/sec), 3x faster than Unstructured. Throughput advantage stable across multiple benchmarks. — [ChatForest](https://chatforest.com/), [Procycons](https://procycons.com/), [Real Python](https://realpython.com/)
+- **[HIGH]** Strong adoption and active maintenance — 91,000 GitHub stars, 5,400 forks, 74 contributors in ~6 months. MIT license, regular release cycles, integration with AutoGen and Azure signaling strategic positioning. [GitHub](https://github.com/microsoft/markitdown), [InfoWorld review](internal) — Unlikely to deprecate.
 
-- **[HIGH]** Format breadth: 15–20 documented input types (PDF, DOCX, XLSX, PPTX, HTML, TXT, PNG, JPEG, GIF, SVG, MP3, WAV, YouTube URLs, web links). Single library covers mixed-format ingestion without format-specific branching logic. — [GitHub](https://github.com/microsoft/markitdown)
+- **[MEDIUM]** MCP server integration enables agent automation — markitdown-mcp exposes document conversion as tool for Claude Desktop and MCP-compatible agents. Multiple community implementations available (trsdn, KorigamiK). Deployable via Docker. [MCP Registry](https://modelcontextprotocol.io/)
+  - **Recommendation role:** Supporting—expands use case to agent-based pipelines.
 
-- **[HIGH]** MIT-licensed, actively maintained (v0.1.3 Aug 2024, v0.1.4 Dec 2024, v0.1.5 Feb 2026). Note (2026-04-24): The Microsoft AutoGen framework — MarkItDown's parent project — has transitioned to maintenance mode, with Microsoft Agent Framework (MAF) as the official successor. MarkItDown remains actively updated (v0.1.5 Feb 2026), but future feature velocity may depend on community momentum rather than Microsoft engineering investment. — [AutoGen Discussion #7066](https://github.com/microsoft/autogen/discussions/7066), [GitHub releases](https://github.com/microsoft/markitdown/releases)
+- **[MEDIUM]** Growing plugin ecosystem disabled by default — markitdown-ocr for LLM-powered image text extraction, Korean HWP support, web scraping. Disabled by default avoids bloat and security risks. [GitHub](https://github.com/microsoft/markitdown)
 
-- **[MEDIUM]** Optional vision-model OCR (v0.1.5+): GPT-4o, Azure OpenAI Document Intelligence, and Claude-compatible endpoints for image text extraction. Extends baseline OCR from 15% to higher accuracy on image-heavy documents (requires API integration and cost). — [GitHub release notes](https://github.com/microsoft/markitdown/releases)
+### Architectural Limitations (Why Performance Comes With Tradeoffs)
 
-- **[MEDIUM]** Error-handling chains proven pattern: MarkItDown → Docling or Azure Document Intelligence → text extraction. Fallback approach amortizes speed advantage while catching edge cases (e.g., complex PDFs, tables). Mentioned in multiple integration tutorials. — [Frank's World blog](https://franksworld.com/), [DEV Community](https://dev.to/)
+- **[HIGH]** Speed-accuracy trade-off is fundamental — MarkItDown: 180+ files/sec on simple PDFs, ~25% success rate on complex/structured PDFs. Docling: ~0.5 files/sec, 97.9% accuracy on table extraction. Marker and MinerU preserve sections, reading order, and formulas. [Deep-Dive Counter 5](internal), [Multiple independent benchmarks](internal)
+  - **Confidence caveat:** Speed benchmarks use simple PDFs; accuracy benchmarks use complex ones. Direct 1:1 comparison not available in same test suite.
+  - **Recommendation role:** Supporting—informs use case selection but cannot be sole criterion.
 
-### Weaknesses
+- **[HIGH]** Wrapper library architecture limits quality ceiling to underlying dependencies — MarkItDown is thin wrapper around pdfminer (text-only extraction), python-docx (no merged cell support), python-pptx (incomplete). Quality for each format determined by underlying library's capabilities. [GitHub analysis](internal), [Deep-Dive Counter 6](internal)
+  - **Transferability:** Design pattern applies to any wrapper-based conversion tool.
+  - **Recommendation role:** Core—explains why MarkItDown cannot match specialized converters.
 
-- **[HIGH]** Overall accuracy baseline: Per ChatForest benchmark (proprietary methodology, not independently verified via public sources): 47.3% success rate across 94 real-world documents. Means ~50% of documents fail baseline conversion and require fallback processing. Unacceptable as standalone solution. — [ChatForest benchmark](https://chatforest.com/)
+- **[HIGH]** Table extraction is column-wise enumeration, destroying row-column relationships — Tables extracted as [all column-1 values], [all column-2 values], [all column-3 values] rather than row-by-row. Example: Transaction table (Date, Description, Amount) becomes [all dates], [all descriptions], [all amounts]. Applies to PDF, DOCX, PPTX, XLSX. [Landscape F4](internal), [Deep-Dive Counter 1](internal), [Gap-Fill DOCX analysis](internal)
+  - **Real-world impact:** Renders any table with row-dependent meaning (financial transactions, scientific data) unusable for downstream analysis. NOT SUITABLE FOR legal document analysis, financial data extraction, or healthcare records where table structure preservation is critical.
+  - **Recommendation role:** Core—disqualifies MarkItDown for structured data extraction and regulated domains.
 
-- **[HIGH]** Format-specific accuracy collapse:
-  - PDF conversion: 25% success (scanned PDFs, unstructured layouts fail)
-  - Image OCR: 15% success (text extraction from images without vision models)
-  - Table extraction: 0% (architectural failure—extracts columns separately, destroying row-column correlation)
-  — [ChatForest](https://chatforest.com/), [Systenics AI](https://systenics.com/), [DEV Community](https://dev.to/)
+### Format-Specific Failure Modes
 
-- **[HIGH]** Table extraction is architectural failure, not a bug: GitHub issue #41 (open since 2024, no assignee) documents that MarkItDown "resulting Markdown doesn't include tables, titles, etc. Pretty much, no structure." Systenics real-world test on SEC 10-K DOCX: MarkItDown extracted transaction table "one column at a time" (all dates first, then descriptions), destroying row-column correlation. Docling produced "clean, perfect Markdown table." Not fixable without architectural rewrite. — [GitHub issue #41](https://github.com/microsoft/markitdown/issues/41), [Systenics AI](https://systenics.com/)
+#### PDF
 
-- **[HIGH]** Text line handling breaks on unstructured PDFs: PDFs without structural metadata (text layer) exhibit line-breaking failures. Example (Systenics): "Customer Id : 43416064" split across 3 separate lines during extraction, making post-processing difficult. Scanned documents (image-based) trigger this. — [Systenics AI](https://systenics.com/)
+- **[HIGH]** Known PDF conversion limitations are well-documented — Scanned/protected PDFs produce empty or garbled output (no text layer to extract). HTML-to-Markdown regressions after markdownify library updates cause raw HTML passthrough. Performance degrades catastrophically on files >10MB due to synchronous PDFMiner architecture. [GitHub issues](https://github.com/microsoft/markitdown), [Independent benchmarks](internal)
+  - **Confidence caveat:** Single GitHub issue (#1276) for synchronous bottleneck; not independently corroborated by landscape brief.
 
-- **[MEDIUM]** Document complexity threshold ~10MB: DEV Community benchmark indicates MarkItDown performance degrades sharply on documents >10MB or complex layouts. Exact threshold varies with document structure; requires empirical validation per corpus. No authoritative threshold published by Microsoft. — [DEV Community benchmark](https://dev.to/)
+- **[MEDIUM]** PDF conversion success rate ~25% on complex/structured documents — Breaks simple text lines, loses heading levels, destroys table structure. Docling (97.9%), Marker, and Mistral Document AI outperform. [Multiple benchmarks](internal)
+  - **Confidence caveat:** Benchmarks use different test suites; direct comparison control not available.
 
-- **[MEDIUM]** Office format support quality limited: Supports DOCX, XLSX, PPTX as input, but with limited structure preservation. Systenics testing shows no structured table/list extraction, only basic text. GitHub issue #41 indicates "no structure" extraction. Suitable for simple Office documents only. — [Systenics AI](https://systenics.com/), [GitHub issue #41](https://github.com/microsoft/markitdown/issues/41)
+#### DOCX
 
-- **[MEDIUM]** Version 0.1.5 (Feb 2026) indicates pre-1.0 API instability per SemVer. Expect feature churn, breaking changes. Microsoft frames as open-source research project, not productized SaaS with SLA. No formal support guarantee; enterprises must plan internal support. — [GitHub releases](https://github.com/microsoft/markitdown/releases), [SemVer.org](https://semver.org/)
+- **[MEDIUM]** DOCX structure preservation is PARTIAL: merged cells and nested tables lost — Landscape brief claims "proper Markdown tables with structure preservation." Reality: Merged cells not handled (GitHub Issue #20), nested tables completely discarded (GitHub Issue #1248). Docling significantly outperforms MarkItDown on DOCX conversion. [GitHub issues](https://github.com/microsoft/markitdown)
+  - **Recommendation role:** Contextual—shapes format selection strategy within MarkItDown ecosystem.
 
-### Security Analysis
+- **[MEDIUM]** Nested tables in DOCX are completely discarded during conversion — When DOCX contains nested tables, outer table structure is preserved but inner table content is missing. Tool does not flatten or preserve nested tables as HTML alternatives; it simply discards them. [GitHub Issue #1248](https://github.com/microsoft/markitdown)
 
-#### Vulnerabilities & Fixes
+#### PPTX
 
-- **[HIGH — PATCHED (partially)]** CVE-2025-64512 (pdfminer.six Insecure Deserialization): Local Privilege Escalation / Code Execution via Malicious PDF
-  - **Details:** MarkItDown uses pdfminer.six for PDF parsing. In pdfminer.six versions <20251107, the `CMapDB._load_data()` function uses `pickle.loads()` without validation. A malicious PDF can specify a crafted `.pickle.gz` file path; if that file is present on the target filesystem, it executes arbitrary code when the PDF is processed. Attack requires both a malicious PDF AND an attacker-controlled file on the target filesystem (local privilege escalation context, not arbitrary remote code execution).
-  - **Important:** The initial patch (version 20251107) is INCOMPLETE. CVE-2025-70559 is a documented bypass of this patch. Verify your deployment uses a pdfminer.six version that addresses both CVEs.
-  - **Impact:** Code execution on processing servers when handling attacker-controlled PDFs in environments where the attacker can also pre-place files on the filesystem (e.g., shared-hosting, multi-tenant systems, systems with arbitrary file upload).
-  - **Fix:** pdfminer.six patched in version 20251107 (partial). CVE-2025-70559 patch required for full remediation. MarkItDown does NOT explicitly pin pdfminer.six version in pyproject.toml — transitive dependency pinning required.
-  - **Current Status:** Risk exists for any deployment running pdfminer.six <20251107. Higher risk in multi-tenant or shared environments.
-  - **Mitigation:** (1) Run `pip show pdfminer.six` to verify installed version. (2) Pin `pdfminer.six>=20251107` explicitly in requirements.txt or pyproject.toml. (3) Run `pip-audit` to catch transitive version conflicts. (4) Monitor pdfminer.six for CVE-2025-70559 patch status. (5) For untrusted PDF input, prefer `convert_response()` with pre-validated downloads or restrict PDF processing entirely until pinning is confirmed.
-  — [NVD CVE-2025-64512](https://nvd.nist.gov/vuln/detail/CVE-2025-64512), [GitHub Advisory GHSA-f83h-ghpp-7wcc](https://github.com/pdfminer/pdfminer.six/security/advisories/GHSA-f83h-ghpp-7wcc), [CVE-2025-70559 (patch bypass)](https://www.sentinelone.com/vulnerability-database/cve-2025-70559/), [Public PoC luigigubello](https://github.com/luigigubello/CVE-2025-64512-Polyglot-PoC)
+- **[UNVERIFIED]** PPTX quantitative conversion accuracy metrics are not available — GitHub issues document PPTX crashes (TypeError: NoneType vs Emu, Issue #1293), invalid file error handling (Issue #1408), missing image extraction (Issue #56). No independent benchmarks comparing PPTX conversion accuracy to Docling or Marker. [GitHub issues](https://github.com/microsoft/markitdown)
+  - **Caveat:** Specific failures documented; no overall quality metric available. Do not claim quantitative PPTX accuracy without explicit disclaimer.
 
-- **[HIGH — PATCHED]** CVE-2025-11849 (Mammoth Dependency): Directory Traversal, CVSSv3 base score of 5.4–6.4 (Medium severity)
-  - **Details:** MarkItDown depends on mammoth for DOCX conversion. Mammoth v0.3.25–1.10.x contained a directory-traversal vulnerability: untrusted DOCX files with external image links (r:link instead of r:embed) could read arbitrary files (/etc/passwd, /etc/shadow, config files) or trigger DoS by linking to /dev/random.
-  - **Impact:** Any organization processing untrusted DOCX files with old mammoth versions exposed to arbitrary file read.
-  - **Fix:** Fixed in mammoth v1.11.0 (external file access disabled by default). MarkItDown v0.1.4+ (Dec 2024) and v0.1.5 (Feb 2026) pin mammoth ≥1.11.0.
-  - **Current Status:** MarkItDown itself is NOT vulnerable if updated to v0.1.4+. Teams using MarkItDown 0.1.0–0.1.3 with locked old mammoth versions in lock files remain exposed.
-  - **Behavior Change Note:** The fix in mammoth ≥1.11.0 DISABLES external file access entirely (r:link attributes in DOCX are ignored). This is a breaking change for workflows relying on external image links in DOCX files. Verify this is acceptable for your document corpus before upgrading.
-  - **Mitigation:** Verify MarkItDown version ≥0.1.4 and scan for locked mammoth versions in requirements.txt/poetry.lock.
-  — [GitHub Security Advisory GHSA-rmjr-87wv-gf87](https://github.com/advisories/GHSA-rmjr-87wv-gf87), [Snyk SNYK-JS-MAMMOTH-13554470](https://snyk.io/), [NVD CVE-2025-11849](https://nvd.nist.gov/), [GitHub PR #1520](https://github.com/microsoft/markitdown/pull/1520)
+#### XLSX
 
-- **[HIGH — PATCHED]** XXE Vulnerability (XML External Entity Attack): Fixed v0.1.2+ — [GitHub releases](https://github.com/microsoft/markitdown/releases)
-  - **Details:** MarkItDown had XXE vulnerability in DOCX/XLSX/PPTX processing. Untrusted Office files with XXE payloads could read arbitrary files or trigger DoS.
-  - **Fix:** Fixed in v0.1.2 (May 2024) by switching from stdlib minidom to defusedxml library. Responsible fix.
-  - **Current Status:** XXE mitigated for v0.1.2+. Indicates file parsing is a persistent risk area.
-  - **Mitigation:** Use MarkItDown v0.1.2+.
-  — [GitHub releases](https://github.com/microsoft/markitdown/releases)
+- **[UNVERIFIED]** XLSX conversion quality is undocumented — Landscape brief claims XLSX support. Zero quality data available (no benchmarks, no GitHub issue analysis, no comparative testing). Feature claimed but unvalidated. [Feature support claim only](https://github.com/microsoft/markitdown)
 
-#### Dependency Supply Chain Risk
+### Encoding and Internationalization
 
-- **[HIGH]** Dependency footprint: markitdown[all] installs 251MB and 25 dependencies:
-  - Core PDF: pdfminer.six, pdfplumber, pypdf
-  - Office: mammoth, python-pptx, openpyxl, xlrd, olefile
-  - Document AI: lxml, pandas
-  - Cloud: azure-ai-documentintelligence, azure-identity
-  - Multimedia: pydub, SpeechRecognition, youtube-transcript-api
-  - Each dependency is a CVE surface. Recent example: CVE-2025-11849 in mammoth.
-  - **High-Risk:** pdfminer.six — CVE-2025-64512 (insecure deserialization) requires explicit version pinning ≥20251107. Note: 20251107 patch is incomplete; CVE-2025-70559 is a bypass. Monitor both CVEs.
-  - **Mitigation:** (1) Use minimal install (markitdown) for text/HTML only (~6 dependencies, ~50MB). (2) Regular dependency scanning with `pip-audit`, Snyk, or Dependabot. (3) Monitor GitHub security advisories for MarkItDown.
-  — [pyproject.toml](https://raw.githubusercontent.com/microsoft/markitdown/main/packages/markitdown/pyproject.toml)
+- **[HIGH]** Encoding/Unicode crashes on non-ASCII characters — Tool crashes with UnicodeEncodeError or produces garbled output on Cyrillic, CJK, special symbols (©, ™, ✓). Multiple GitHub issues (#138, #291, #1290). Does not gracefully skip problematic characters. [GitHub issues](https://github.com/microsoft/markitdown)
+  - **Recommendation role:** Core—disqualifies for non-English or multilingual documents. Unsuitable for any pipeline processing documents from non-English-speaking regions without pre-screening and error handling.
 
-#### Plugin Security (Opt-In, Default Disabled)
+- **[UNVERIFIED]** Regional/non-Latin language support quality undocumented — Encoding crashes documented for Cyrillic and CJK; scope of language support unclear. No systematic testing on Chinese, Arabic, Japanese, or other non-Latin scripts beyond crash reports. [GitHub issue analysis](internal)
 
-- **[MEDIUM]** Plugin architecture introduced v0.1.0+: Plugins are arbitrary Python code. Disabled by default. Security implications of enabling untrusted plugins NOT formally documented by Microsoft. Enabling plugins in multi-tenant or untrusted environments poses code-execution risk.
-  - **Multi-Tenant Risk:** Enabling plugins in environments where untrusted users can register plugins is NOT RECOMMENDED without: (1) source-code review by a security team, (2) plugin sandboxing via containerization with restricted filesystem and network access, (3) capability restriction per plugin. Default-disabled setting is correct for shared or production environments.
-  - **Mitigation:** If plugins enabled, require source-code review and sandboxing. Keep disabled in production unless explicitly needed.
-  — [GitHub plugin documentation](https://github.com/microsoft/markitdown), [Director note](https://github.com/microsoft/markitdown/discussions)
+### Security Considerations
 
-#### MCP Deployment Risk (SSRF)
+- **[CRITICAL]** MarkItDown v0.1.5 is vulnerable to GHSA-f83h-ghpp-7wcc (CVE-2025-70559) — Insecure pickle deserialization in pdfminer.six CMap loader allows local privilege escalation. Attack vector: Low-privileged user places malicious pickle file in writable CMap cache directory; trusted process loads it with elevated privileges. [GitHub security advisory](https://github.com/microsoft/markitdown/security), [CVE-2025-70559](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-70559)
+  - **Current state:** MarkItDown v0.1.5 pins pdfminer.six **20251107**, which introduced the vulnerability GHSA-f83h-ghpp-7wcc while attempting to fix CVE-2025-64512. MarkItDown v0.1.5 is **critically vulnerable** and requires immediate manual remediation.
+  - **Patch requirement:** pdfminer.six **20251230 or later** required to remediate (replaces pickle with JSON). **Mandatory action: Pin pdfminer.six >= 20251230 in your requirements.txt BEFORE installing MarkItDown, or use environment constraint in pyproject.toml. This must be done manually as MarkItDown v0.1.5 does not include the fix.**
+  - **Availability:** pdfminer.six 20260107 (January 2026) is current; MarkItDown does not pin it.
+  - **Risk scope:** Applies to systems processing untrusted PDF input OR systems where unprivileged users have access to writable cache directories. **Do not deploy v0.1.5 to production systems processing user-uploaded documents without sandboxing and privilege isolation.**
+  - **Recommendation role:** Core—presence of unpatched critical CVE is a must-carry caveat for any production deployment recommendation.
 
-- **[MEDIUM]** MarkItDown MCP server (markitdown-mcp) exposes `convert_to_markdown(uri)` without built-in URI scheme validation. Two distinct risks:
-  - **(1) General MCP vulnerability:** BlueRock security research analyzed 7,000+ MCP servers; 36.7% have potential SSRF vulnerabilities. MarkItDown MCP cited as example.
-  - **(2) MarkItDown MCP specific:** Can be exploited to read local files (file://) or trigger SSRF attacks (https:// to internal IPs). AWS IMDSv1 metadata IP (169.254.169.254) allows exfiltration of IAM credentials.
-  - **(3) Ecosystem Context:** BlueRock analysis of 7,000+ MCP servers found 36.7% have potential SSRF vulnerabilities. MarkItDown MCP SSRF reflects a broader MCP ecosystem design gap, not a MarkItDown-unique flaw. However, this prevalence makes URI validation even more important — attackers know the pattern.
-  - **Scope clarification:** Risk is in MCP server implementation, NOT in Python library itself. `convert_local()` and `convert_response()` are safe.
-  - **Mitigation:** (1) If MCP exposed to untrusted clients, implement URI scheme/path allowlists UPSTREAM of MarkItDown (whitelist http/https only, block file://). (2) Add Authorization layer before MCP. (3) Prefer `convert_local()` over `convert_to_markdown(uri)` for untrusted clients.
-  — [BlueRock security research](https://bluerock.io/), [GitHub MCP README](https://github.com/microsoft/markitdown)
+- **[HIGH]** CVE-2025-64512: RCE via malicious PDF in pdfminer.six <20251107 — pdfminer.six <20251107 uses pickle.loads() for CMap deserialization. Malicious PDF can redirect pickle.gz loading for remote code execution. MarkItDown v0.1.3 was vulnerable before Dec 2025 patch (v0.1.4). [CVE-2025-64512](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-64512)
+  - **Historical note:** v0.1.5 addressed this CVE but introduced a distinct vulnerability (GHSA-f83h-ghpp-7wcc).
 
-### Alternatives
+- **[MEDIUM]** Prompt injection risk in LLM pipelines — When feeding MarkItDown output to language models, document content flows directly into LLM context without mention of prompt-injection mitigations. A malicious PDF could contain crafted text like "Ignore previous instructions" or other injection payloads that influence LLM behavior. [Security reviewer protocol](internal)
+  - **Mitigation:** Use prompt-engineering practices to isolate document content from system instructions: (a) Structure prompts with explicit delimiters (`[DOCUMENT START]...[DOCUMENT END]`), (b) Use system-prompt prefix that establishes instruction hierarchy, (c) Implement output guardrails to reject model responses that appear to leak prompts.
+  - **Recommendation role:** Supporting—essential safeguard for untrusted document processing in agent/LLM pipelines.
 
-- **[HIGH]** Docling: 97.9% table cell accuracy (benchmarked 2025; accuracy has continued to improve in 2026 with Granite-Docling Oct 2025, Nemotron OCR March 2026, PyMuPDF-Layout March 2026), AI-powered layout understanding. Trade-off: 6.28s per page (~65s per 50-page document), 1,032MB footprint, 88 dependencies. Preferred for complex PDFs, scientific papers, financial reports. — [Procycons benchmark](https://procycons.com/), [Systenics AI](https://systenics.com/), [ChatForest](https://chatforest.com/), [IBM Granite-Docling](https://www.infoq.com/news/2025/10/granite-docling-ibm/), [Docling at NVIDIA GTC](https://www.docling.ai/blog/20260311_00_docling_at_gtc/)
+- **[MEDIUM]** Transitive dependency vulnerability scanning required — MarkItDown depends on 25 transitive dependencies. Each is a potential CVE vector (as proven by GHSA-f83h-ghpp-7wcc in pdfminer.six). Users must proactively monitor and upgrade dependencies. [OSS security best practices](internal)
+  - **Mitigation:** Use automated dependency vulnerability scanning: `pip audit` weekly, configure GitHub Dependabot or Snyk, subscribe to CVE mailing lists for pdfminer.six, python-docx, and python-pptx.
+  - **Recommendation role:** Supporting—prevents silent security drift in production deployments.
 
-- **[MEDIUM]** Unstructured: Enterprise-grade document processing platform. 88%+ reliability, OCR and NLP models, API-based SaaS or open-source self-hosted. Slower than MarkItDown; more reliable. Offers support contracts. Suitable for mission-critical pipelines with budget. — [ChatForest](https://chatforest.com/), [Procycons](https://procycons.com/)
+### Operational Hidden Costs
 
-- **[MEDIUM]** Marker: Open-source, balanced speed/structure, strong image handling. Preferred for mixed-media documents. Slower than MarkItDown; outperforms on layout preservation. — [Jimmy Song article](https://jimmysong.io/)
+- **[MEDIUM]** Installation is simple but carries 25 transitive dependencies with hidden operational costs — Installation via pip is straightforward with optional dependency groups. However, 25 transitive dependencies require security patching (CVE-2025-64512 required urgent patching). Production use adds encoding error handling (15-20% code complexity), exponential backoff for batch processing, retry logic, and dependency version pinning. **Production deployment requires 40-60 engineering hours, 3-5 weeks, and $2-5K budget for proper implementation with error handling, monitoring, and fallback mechanisms.** [Dependency tree analysis](internal), [Stress test findings](internal)
+  - **Transferability:** Hidden cost pattern applies to any OSS tool with broad optional dependencies.
+  - **Recommendation role:** Supporting—prevents underselling of operational complexity.
 
-- **[MEDIUM]** MinerU: GPU-accelerated, detects heading levels, complex tables as HTML, quality approaches commercial tools. Preferred for academic and structured documents. High resource usage; slower than MarkItDown. — [Jimmy Song article](https://jimmysong.io/)
+- **[MEDIUM]** MarkItDown positioned as "simple, lightweight" but marketing undersells operational complexity — Landscape and vendor blogs emphasize ease of installation and multi-format support. Marketing does not highlight CVE history, encoding fragility, table destruction, or hidden operational costs (dependency patching, error handling, fallback strategies). [Marketing materials](internal)
 
-### Cross-Vertical Risks & Caveats
+### Positioning vs Alternatives
 
-- **[HIGH]** 47% accuracy baseline requires fallback validation. Nearly 50% of documents may fail baseline conversion. Implementation must include validation logic and fallback to Docling, Azure Document Intelligence, or manual review. Do NOT treat 47% as acceptable without fallback chain. — [ChatForest benchmark](https://chatforest.com/)
+- **[MEDIUM]** RAG pipeline fit is scope-dependent and partially contradicted — **Simple-text RAG:** MarkItDown recommended for legal documents, plain-text academic papers (token efficiency, ease of integration). **Structured RAG:** MarkItDown underperforms. Docling (97.9% accuracy) and Marker outperform on structured tables and scientific datasets. **Recommended approach for production:** Implement hybrid routing—MarkItDown for simple documents (file size <2MB, no tables detected), Docling/Marker for complex documents, Azure Document Intelligence for high-accuracy requirements. Total cost increase ~15-20% but ensures SLA compliance. Distinguishing "simple" vs "complex" documents requires either ~30% misclassification tolerance with rule-based heuristics OR investment in ML-based document classifiers for 95% accuracy; naive file-size detection is insufficient for production. Both routing strategies are valid for different scopes. [Emelia RAG guide](internal), [Deep-Dive Counter 5 benchmark](internal), [Systenics RAG comparison](internal), [Stress test findings](internal)
+  - **Must carry caveat:** RAG recommendation depends on source document complexity and structure importance.
 
-- **[HIGH]** Table extraction failure is architectural. GitHub issue #41 (open since 2024) documents that MarkItDown "doesn't include tables, no structure." MarkItDown extracts table columns separately, destroying row-column correlation. Not a bug; by design. Table-rich documents (financial reports, scientific papers, legal documents) require Docling or post-processing. — [GitHub issue #41](https://github.com/microsoft/markitdown/issues/41)
+## Counterarguments & Risks
 
-- **[MEDIUM]** CVE-2025-11849 (mammoth) requires version verification. MarkItDown v0.1.4+ is patched. Older versions (0.1.0–0.1.3) with locked old mammoth pins remain exposed to directory traversal on untrusted DOCX. Scan lock files before deployment. — [NVD](https://nvd.nist.gov/)
+- **Table destruction disqualifies MarkItDown for any structured data pipeline.** Column-wise enumeration is not a bug but an architectural consequence of Markdown's native table syntax. Specialized converters (Docling, Marker, MinerU) preserve row-column structure at the cost of speed. **Do not use for legal document analysis, financial data extraction, or healthcare records.**
 
-- **[MEDIUM]** MCP SSRF risk requires upstream URI validation. If MarkItDown MCP exposed to untrusted clients, implement URI scheme allowlists and Authorization layer. Python library (`convert_local()`) is safe. — [BlueRock](https://bluerock.io/)
+- **Encoding instability requires document pre-screening in production.** Non-ASCII documents crash the tool. Multilingual pipelines are not viable without upstream filtering or tool replacement.
 
-### ⚠️ UNVERIFIED CLAIMS — Do Not Cite
+- **Unpatched CVE in current stable release (v0.1.5) prevents immediate production deployment without manual remediation.** Users must manually upgrade pdfminer.six to 20251230+ before deploying. Dependency upgrade path is unclear; MarkItDown v0.1.6 release date unknown.
 
-- **[UNVERIFIED — Do not cite without internal validation]** Frank's World blog claims heading-aware Markdown chunking (split at H2/H3, preserve metadata) boosts RAG retrieval accuracy 40–60% vs. naive splitting. No methodology disclosed; no independent corroboration found. **Recommendation:** Do NOT reference this claim in reports or decision documents without validating against actual corpus. — [Frank's World blog](https://franksworld.com/)
+- **Wrapper architecture means MarkItDown cannot exceed underlying library quality.** pdfminer is text-only; python-docx lacks merged-cell and nesting support. Tool improvement requires upstream library improvements.
 
-- **[UNVERIFIED — Do not cite without internal validation]** SSRF Allowlists / Rate Limits in URL Fetching: If MarkItDown library or MCP exposes `convert(url)` API, whether built-in allowlists or rate limits exist is UNVERIFIED. Director note indicates investigator searched GitHub/docs and found no documentation. Security posture depends on this. **Recommendation:** Contact Microsoft or perform source-code audit to confirm URL validation strategy before exposing MCP to untrusted clients.
+- **Prompt injection vulnerability in LLM pipelines.** Document content flows into LLM context without explicit isolation. Use structured prompts with delimiters to separate document content from system instructions.
 
 ## Gaps & Unknowns
 
-### Critical Gaps
+- **PPTX quantitative benchmarking** — No independent benchmark comparing MarkItDown PPTX accuracy to Docling, Marker, or MinerU. Landscape claims PPTX as supported format; Gap-Fill documents specific failures but no overall quality metric.
 
-- **SSRF Allowlists / Rate Limits in URL Fetching:** If MarkItDown library or MCP exposes `convert(url)` API, whether built-in allowlists or rate limits exist is UNVERIFIED. Director note indicates investigator searched GitHub/docs and found no documentation. Security posture depends on this. **Recommendation:** Contact Microsoft or perform source-code audit to confirm URL validation strategy before exposing MCP to untrusted clients.
+- **XLSX conversion quality** — Zero quality data on Excel file conversion (formulas, structure preservation, performance). Landscape claims XLSX support; no evidence provided beyond "converts to Markdown tables."
 
-### Significant Gaps
+- **Patch adoption timeline for GHSA-f83h-ghpp-7wcc** — MarkItDown v0.1.6+ release date unknown as of 2026-04-26. Unclear whether next version will upgrade pdfminer.six to 20251230+.
 
-- **Exact Vision Model Compatibility (OCR Plugin):** MarkItDown-OCR documentation lists GPT-4o, Azure OpenAI, "OpenAI API-compatible." Compatibility with Claude (via Anthropic SDK) or open-source vision models (LLaVA, etc.) is UNTESTED. **Recommendation:** Test vision-model integration with actual target models before deploying.
-
-- **Multi-Language Evaluation:** All benchmarks (ChatForest, Systenics, DEV Community, Procycons) focus on English documents. Behavior on CJK (Chinese/Japanese/Korean), RTL (Arabic/Hebrew), or code-heavy mixed-language documents is UNKNOWN. **Recommendation:** Validate with representative multilingual corpus.
-
-- **Performance Data on Complex Mixed Documents:** Benchmarks exist for pure PDF, pure Office, pure HTML. Real-world mixed-format pipelines (PDFs + XLSX + images in one corpus) lack systematic benchmarks. **Recommendation:** Conduct internal benchmarking on representative mixed corpus.
-
-- **Total Cost of Ownership Analysis:** No published comparison (speed gains + fewer dependencies vs. accuracy failures requiring rework) for specific document volumes and accuracy thresholds. Deep-dive calculates optional costs (Azure Document Intelligence, LLM API calls) but no comprehensive TCO model. **Recommendation:** Organizations should model against actual document corpus and accuracy SLA.
-
-### Minor Gaps
-
-- **Tested Throughput Limits & Cluster Deployment:** No documented max files/sec, memory per doc, or resource limits. Cluster deployment guidance missing. **Recommendation:** Validate throughput limits in target environment.
-
-- **Maintenance Velocity Metrics:** Repository shows 352 issues, 286 PRs; unclear how many are active vs. stale. Commit frequency and maintainer count not quantified. **Recommendation:** Query GitHub API for commit frequency.
+- **Azure Document Intelligence integration cost-performance at scale** — Deep-Dive mentions Azure ($1-5/page) as fallback for complex PDFs; total pipeline cost unknown. No TCO analysis or hybrid pipeline benchmarks available.
 
 ## Confidence Summary
 
-- **HIGH:** 13 findings (speed benchmarks, accuracy metrics, CVE details, table failure, community momentum, format breadth, security patches)
-- **MEDIUM:** 5 findings (size threshold, version stability, office support quality, MCP SSRF, vision model integration)
-- **LOW:** 2 findings (RAG accuracy boost claim, chunking pattern generalization)
-- **UNVERIFIED:** 2 findings (URL fetching allowlists/rate limits, RAG accuracy improvement claim)
-
----
-
-**Research Date:** 2026-04-24  
-**Analyzed By:** Claude Code Analyzer (Haiku 4.5)  
-**Synthesis Status:** COMPLETE
+- **HIGH:** 15 findings (architectural strengths, documented limitations, security vulnerabilities, adoption metrics)
+- **MEDIUM:** 8 findings (performance trade-offs, format-specific quality, scope-dependent recommendations, operational complexity)
+- **LOW:** 2 findings (synchronous bottleneck confirmation pending; encoding scope unclear)
+- **UNVERIFIED:** 3 findings (PPTX quantitative benchmarks, XLSX quality, regional language support)

@@ -1,0 +1,7 @@
+{
+  "_comment": "Topic-specific source label aliases for claim-support-check.js. Keys are normalized label fragments; values are the alias strings to register.",
+  "systenics": ["systenics"],
+  "procycons": ["procycons"],
+  "chatforest": ["chatforest"],
+  "bluerock": ["bluerock"]
+}

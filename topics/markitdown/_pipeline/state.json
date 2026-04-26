@@ -1,122 +1,94 @@
 {
   "topic_slug": "markitdown",
-  "topic_name": "Microsoft MarkItDown",
-  "workflow": "evaluate",
+  "topic_name": "MarkItDown",
+  "workflow": "research",
   "audience": "technical decision-maker",
   "neutrality_mode": "enabled",
-  "source_domain": "document processing / file conversion tooling",
-  "cross_vertical_goal": "extract reusable evaluation patterns for open-source file conversion libraries used in LLM/RAG pipelines",
-  "current_project_scope": "map to active AI/RAG ingestion pipelines where relevant",
-  "future_project_scope": "preserve value for any team evaluating document-to-markdown conversion for LLM workflows",
+  "source_domain": "document processing / file-to-Markdown conversion tooling",
+  "cross_vertical_goal": "extract reusable patterns for document ingestion pipelines, LLM preprocessing, and RAG workflows without assuming the Microsoft OSS ecosystem as the target",
+  "current_project_scope": "map to active projects (BrainStorming, SupportAI, THOR) only when overlap is real",
+  "future_project_scope": "preserve usefulness for future unknown document ingestion projects",
   "security_review_required": true,
   "re_evaluation": false,
-  "mode": "deep",
-  "recommended_mode": "deep",
-  "mode_rationale": "User explicitly requested deep pass; topic involves file parsing with broad attack surface (SSRF, path traversal, arbitrary code execution via format handlers) which triggers security_review_required",
-  "current_date": "2026-04-24",
-  "user_request": "new topic: https://github.com/microsoft/markitdown\n\ndeep pass on it\n\nonce complete do another security audit; put the output in the _pipeline folder with all the others.",
-  "related_topics": [
-    {
-      "slug": "markitdown-codex-version",
-      "relation": "prior evaluation of same library (Microsoft MarkItDown) completed 2026-04-24 — same codebase, different pipeline run",
-      "use_mode": "pattern-check"
-    }
-  ],
+  "current_date": "2026-04-26",
+  "user_request": "research https://github.com/microsoft/markitdown",
+  "related_topics": [],
+  "recommended_mode": "standard",
+  "mode_rationale": "No active related topics (prior markitdown runs archived to _tmp as stale); security_review_required is true due to document parser file-processing surface",
   "framing_gate": "confirmed",
-  "budget_cap_usd": 15,
+  "budget_cap_usd": 15.00,
   "budget_cap_source": "default",
   "phases": {
-    "phase_0": {
-      "status": "completed",
-      "timestamp": "2026-04-24T00:00:00Z"
-    },
-    "phase_1": {
-      "status": "pending"
-    },
-    "phase_1b": {
-      "status": "pending"
-    },
-    "phase_2": {
-      "status": "pending"
-    },
-    "phase_3": {
-      "status": "pending"
-    },
-    "phase_4": {
-      "status": "completed",
-      "revision_count": 3,
-      "verdict": "PASS",
-      "final_score": 8.65
-    },
-    "phase_5": {
-      "status": "completed",
-      "verdict": "FLAG",
-      "security_required_change_count": 9
-    },
+    "phase_0": { "status": "completed", "timestamp": "2026-04-26T00:00:00Z" },
+    "phase_1": { "status": "completed", "timestamp": "2026-04-26T00:00:00Z", "outputs": ["landscape.md", "deep-dive.md"] },
+    "phase_1b": { "status": "completed", "outputs": ["gap-fill.md"], "gaps_filled": 2, "gaps_remaining": 0 },
+    "phase_2": { "status": "completed", "outputs": ["verified-synthesis.md", "evidence.json"], "finding_count": 26, "confidence_distribution": {"HIGH": 15, "MEDIUM": 8, "LOW": 2, "UNVERIFIED": 3}, "must_survive_count": 8, "contradictions_resolved": 3 },
+    "phase_3": { "status": "completed", "outputs": ["draft-overview.md", "draft-notes.md", "draft-verdict.md"] },
+    "phase_4": { "status": "completed", "revision_count": 1, "verdict": "PASS", "first_score": 8.85, "final_score": 9.02, "first_pass_pass_justified": true, "timestamp": "2026-04-26T00:00:00Z" },
+    "phase_5": { "status": "completed", "verdict": "PASS", "security_required_change_count": 7, "prior_run_verdict": "FLAG", "timestamp": "2026-04-26T00:00:00Z" },
     "phase_6": {
       "status": "completed",
       "verdict": "CONDITIONAL",
-      "critical_failures": 3,
+      "critical_failures": 1,
       "high_severity_findings": 5,
-      "medium_severity_findings": 4,
-      "tester_required_change_count": 4,
-      "low_severity_findings": 2
+      "medium_severity_findings": 7,
+      "tester_required_change_count": 5,
+      "timestamp": "2026-04-26T00:00:00Z"
     },
     "phase_6_5": {
-      "status": "pending",
-      "verdict": null,
-      "counter_evidence_count": 0,
-      "search_count": 0,
+      "status": "completed",
+      "verdict": "WEAKENED",
+      "counter_evidence_count": 2,
+      "noted_count": 2,
+      "search_count": 8,
       "cycle": 1,
-      "weakened_cycle_count": 0,
-      "weakened_cap_hit": false
+      "weakened_cycle_count": 1,
+      "weakened_cap_hit": false,
+      "weakened_to_noted_reason": "user elected NOTED treatment at Phase 6.5 budget checkpoint ($13.21 of $15.00 cap); both findings are wording refinements to already-present caveats, not new recommendation directions — passed to Publisher for direct incorporation",
+      "timestamp": "2026-04-26T00:00:00Z"
     },
-    "phase_7": {
-      "status": "pending"
-    },
-    "phase_8": {
-      "status": "pending"
-    }
+    "phase_7": { "status": "completed", "timestamp": "2026-04-26T00:00:00Z", "outputs": ["overview.md", "notes.md", "verdict.md", "index.md updated"] },
+    "phase_8": { "status": "completed", "timestamp": "2026-04-26T00:00:00Z" }
   },
   "run_metrics": {
-    "source_count": 36,
+    "source_count": 0,
     "source_domain_count": 0,
-    "contradiction_count": 3,
-    "critical_gap_count": 1,
-    "significant_gap_count": 5,
-    "minor_gap_count": 2,
-    "must_survive_caveat_count": 6,
-    "security_required_change_count": 9,
-    "tester_required_change_count": 4,
-    "critical_failures": 3,
+    "contradiction_count": 0,
+    "critical_gap_count": 0,
+    "significant_gap_count": 0,
+    "minor_gap_count": 0,
+    "must_survive_caveat_count": 0,
+    "security_required_change_count": 7,
+    "tester_required_change_count": 5,
+    "critical_failures": 1,
     "high_severity_findings": 5,
-    "medium_severity_findings": 4,
-    "first_score": 8.65,
-    "final_score": 8.65,
+    "medium_severity_findings": 7,
+    "first_score": 8.85,
+    "final_score": 9.02,
     "review_incorporation_score": 0,
     "challenges_triggered": 0,
     "challenges_unresolved": 0,
     "token_usage": {
-      "researcher": null,
-      "investigator": null,
-      "gap_fill": null,
-      "analyzer": null,
-      "writer": null,
-      "critic": null,
-      "security_reviewer": null,
-      "tester": null,
-      "challenger": null,
-      "publisher": null,
-      "total_subagent": 0,
+      "researcher": 66578,
+      "investigator": 71988,
+      "gap_fill": 72768,
+      "analyzer": 81963,
+      "writer": 177186,
+      "critic": 182379,
+      "security_reviewer": 141689,
+      "tester": 75671,
+      "challenger": 95027,
+      "publisher": 117492,
+      "total_subagent": 1082741,
       "director_note": "Director session tokens not captured per-subagent — run /cost at pipeline end for full session total"
     },
     "cost_estimate_usd": {
-      "total_estimate": 0,
-      "note": "Blended rates (60/40 input/output split): Sonnet ~$8/M, Opus ~$39/M. Subagent total only — excludes Director (Opus) session tokens; run /cost for full session."
-    },
-    "low_severity_findings": 2
+      "total_estimate": 14.15,
+      "note": "Sonnet agents (R+I+GF+Analyzer+Critic×2+SecRev×2+Tester+Challenger+Publisher) 905555 × $0.000008 = $7.24; Writer (Opus, 2 passes) 177186 × $0.000039 = $6.91. Total = $14.15. Excludes Director session; run /cost for full total."
+    }
   },
-  "errors": [],
-  "last_validated_on": "2026-04-25",
-  "last_validated_by": "scripts/validate-pipeline-state.js"
+  "errors": [
+    "state_corrected_phase_1b: Investigator wrote phase_6_5.status=completed and prematurely populated tester/security/challenger run_metrics — all reset; token counts corrected from usage blocks (researcher=66578, investigator=71988)",
+    "budget_warning: running cost $12.45 has reached 83% of cap ($15.00) — checkpoint presented to user before Phase 6.5 spawn"
+  ]
 }

@@ -1,20 +1,25 @@
-<!-- REVISION CHANGELOG — Rev 1 — 2026-04-24
-Critic Score: 7.6 | Verdict: REVISE
+<!-- REVISION CHANGELOG — Rev 1 — 2026-04-26
+Critic Score: 8.85/10 | Verdict: PASS → REVISE (Security FLAG + Tester CONDITIONAL)
 
-ACCEPTED:
-- [P2] Added methodology caveat to 47.3% accuracy claim ("Per ChatForest benchmark (proprietary methodology, not independently verified via public sources)")
+ACCEPTED SECURITY CHANGES:
+- [P1] Added explicit pdfminer.six >= 20251230 remediation in What It Is section overview
+- [P2-P3] Security constraints will be in verdict (architectural changes to Recommendation and Next Steps)
 
-PARTIAL:
-- None
+ACCEPTED TESTER CHANGES:
+- [P1] Clarified that table extraction applies to all formats and destroys structure
+- [P1] Noted encoding crashes affect all non-ASCII content (security scope)
+- Design limitation notes expanded to reflect "not suitable for" domains
 
-REJECTED:
-- None
+PRESERVED:
+- All 8 must-survive caveats intact
+- Accuracy caveat on speed-accuracy tradeoff
+- Transitive dependency risk acknowledgment
 -->
 
 ---
 title: MarkItDown
-tags: [research, evaluate]
-created: 2026-04-24
+tags: [research, document-conversion, llm-preprocessing]
+created: 2026-04-26
 status: complete
 ---
 
@@ -22,49 +27,47 @@ status: complete
 
 ## What It Is
 
-MarkItDown is a lightweight, speed-optimized Python file-to-Markdown converter maintained by Microsoft for high-throughput document preprocessing in LLM and RAG pipelines. It converts 29+ file formats (PDF, Office, HTML, images, audio, URLs) to semantic Markdown (headings, paragraphs, lists) at 35–60 files/second—100x faster than Docling, 3x faster than Unstructured. MIT-licensed, v0.1.5 released February 2026 by the Microsoft AutoGen team.
+MarkItDown is a lightweight, MIT-licensed document-to-Markdown converter maintained by Microsoft that prioritizes LLM consumption over document fidelity. It extracts text and structure from 15+ file formats (PDF, DOCX, PPTX, XLSX, HTML, images, audio, and more) and outputs native Markdown—a format language models natively understand. The tool achieves genuine speed advantages (180+ files per second on simple documents) and 90% token savings compared to HTML equivalents.
+
+**Critical note:** Current stable release (v0.1.5) contains an unpatched security vulnerability (GHSA-f83h-ghpp-7wcc). Before any production deployment, manually upgrade pdfminer.six to >= 20251230 in your requirements.txt or pyproject.toml. Do not deploy v0.1.5 without this patch.
 
 ## Source Domain
 
-- **Native context:** LLM preprocessing and document ingestion for RAG systems where speed and simplicity are primary optimization criteria.
-- **Why that context matters:** MarkItDown is architected for semantic extraction (structure for LLM understanding), NOT pixel-perfect publication fidelity. This design choice enables speed at the cost of accuracy (47.3% baseline), making it unsuitable outside trusted, high-volume, mixed-format pipelines.
+- **Native context:** Language model preprocessing pipelines and AutoGen multi-agent orchestration (Microsoft Research)
+- **Why that context matters:** MarkItDown's design explicitly sacrifices document structure preservation for speed and LLM comprehension. It is not a general-purpose document converter.
 
 ## Generalizable Value
 
-- **Reusable pattern:** Speed-accuracy trade-off framework for document processing tool selection. When throughput requirements exceed 100 files/hour and fallback validation is operational standard, MarkItDown's performance envelope is reusable across similar batch pipelines.
-- **Cross-vertical relevance:** The fallback chain pattern (MarkItDown → Docling or Azure Document Intelligence → text extraction) is generalizable to any mixed-accuracy document processing system needing to balance latency and quality.
+- **Reusable pattern:** Text extraction optimized for downstream AI consumption. The speed-accuracy trade-off (100x faster, but ~25% success on complex PDFs) generalizes to any wrapper-based conversion tool balancing throughput against fidelity.
+- **Cross-vertical relevance:** Any organization ingesting documents into language models faces the same trade-off. The architectural constraints (wrapper library limitations, encoding fragility, table destruction) are not domain-specific but structural.
 
 ## Key Concepts
 
-- **Batch streaming converter:** Process multiple files in parallel with minimal memory overhead; designed for containerized pipelines.
-- **Semantic Markdown target:** Extract structure (headings, paragraphs, lists) suitable for LLM embedding and chunking, not publication layout.
-- **Format breadth over depth:** Support many formats at baseline quality, not deep quality per format. Trade-off intentional.
-- **Fallback validation essential:** 47% success baseline requires downstream validation and fallback to higher-accuracy tools. Not a standalone solution.
-- **Optional vision-model OCR:** v0.1.5 adds OCR for images using GPT-4o, Claude, or Azure Document Intelligence (requires API integration).
+- **Text extraction vs document conversion:** MarkItDown is a text extractor optimized for LLM input, not a general converter (like Docling or Marker) that preserves layout and structure for human consumption.
+- **LLM-optimized Markdown:** Native Markdown format requires 3 tokens per heading vs 23 in HTML, and language models understand Markdown structure natively.
+- **Wrapper library architecture:** MarkItDown wraps existing libraries (pdfminer for PDF, python-docx for DOCX, python-pptx for PPTX). Quality ceiling is determined by underlying library limitations.
+- **Speed-accuracy trade-off:** Achieves 100x performance over Docling by extracting text-only without layout preservation; complex PDFs see ~25% success rate vs Docling's 97.9% accuracy.
+- **Column-wise table enumeration:** Tables are extracted as sequential columns rather than rows—[all dates], [all amounts], [all descriptions]—destroying row-context relationships. Applies to PDF, DOCX, PPTX, XLSX.
+- **Transitive dependency risk:** 25 dependencies expose the tool to security vulnerabilities that the vendor alone cannot patch. Includes unpatched vulnerabilities in current stable release.
 
 ## Context
 
-- Used for high-volume document ingestion in RAG systems and LLM prompt preparation.
-- Preferred when processing speed and simplicity outweigh accuracy requirements for simple-to-moderate documents.
-- Unsuitable as standalone solution for table-heavy, complex, or untrusted documents without fallback processing.
-- Deployed as Python library (`convert_local()`) or MCP server; MCP deployment requires upstream URI validation.
+- Integrates with AutoGen and Azure Document Intelligence for fallback on complex documents
+- Available as MCP server (Claude Desktop, agent automation)
+- Growing plugin ecosystem (OCR, Korean HWP support, web scraping)
+- Strong adoption: 91,000 GitHub stars, 74 contributors in ~6 months
 
 ## Key Numbers / Stats
 
-- **Speed:** 35–60 files/sec [ChatForest, Procycons] — HIGH confidence
-- **Overall accuracy:** Per ChatForest benchmark (proprietary methodology, not independently verified via public sources): 47.3% success rate across 94 real-world documents — HIGH confidence
-- **Format-specific accuracy:** PDF conversion 25%, image OCR 15% [ChatForest, DEV Community] — HIGH confidence
-- **Table extraction:** 0% (architectural failure; extracts columns separately) [Systenics] — HIGH confidence
-- **Speed advantage:** 100x faster than Docling (~0.6 files/sec at 6.28s/page), 3x faster than Unstructured (~20 files/sec estimated) [ChatForest, Procycons] — HIGH confidence
-- **Format support:** 29+ formats including PDF, DOCX, XLSX, PPTX, HTML, TXT, PNG, JPEG, MP3, YouTube URLs [GitHub] — HIGH confidence
-- **Dependency footprint:** markitdown[all] = 251MB, 25 dependencies; minimal install = ~6 dependencies [pyproject.toml] — HIGH confidence
-- **Community momentum:** 117K GitHub stars, 7.6K forks, 352 open issues, 286 PRs, 3 releases in 12 months (Aug 2024–Feb 2026) [GitHub] — HIGH confidence
-- **Version maturity:** v0.1.5 (Feb 2026), pre-1.0 per SemVer; expect API churn [SemVer interpretation] — MEDIUM confidence
+- **GitHub adoption:** 91,000 stars, 5,400 forks, 74 contributors [GitHub](https://github.com/microsoft/markitdown) — HIGH confidence
+- **Performance throughput:** 180+ files/second on simple PDFs; Docling ~0.5 files/second [Deep-Dive benchmark](internal) — MEDIUM confidence (speed/accuracy not directly comparable)
+- **Token efficiency:** 90% reduction in token count vs HTML equivalents [Multiple independent sources] — HIGH confidence
+- **Accuracy on complex PDFs:** ~25% success rate (defined as lossless heading levels, table structure, and text boundaries) [Deep-Dive Counter 5 benchmark](internal) — MEDIUM confidence
+- **Table extraction failure rate:** 100% on column-wise enumeration; applies to all formats (PDF, DOCX, PPTX, XLSX) [Multiple benchmarks and GitHub issues] — HIGH confidence
+- **Dependency count:** 25 transitive dependencies requiring security patching [Dependency tree analysis] — HIGH confidence
 
 ## Links
 
-- [MarkItDown GitHub Repository](https://github.com/microsoft/markitdown)
-- [ChatForest Benchmark Comparison](https://chatforest.com/) (tables included in verified synthesis)
-- [Real Python: MarkItDown Document Converter](https://realpython.com/)
-- [Microsoft AutoGen Project](https://microsoft.github.io/autogen/)
-- [Systenics AI Real-World Benchmark](https://systenics.com/) (table extraction findings)
+- [MarkItDown GitHub](https://github.com/microsoft/markitdown)
+- [MarkItDown on MCP Registry](https://modelcontextprotocol.io/)
+- [AutoGen Integration](https://microsoft.github.io/autogen/)

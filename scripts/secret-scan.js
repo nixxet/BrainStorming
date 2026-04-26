@@ -17,8 +17,13 @@ function runExternalScanner() {
       cwd: repoRoot,
       encoding: "utf8",
     });
+
+    // Scanner binary not found — try next
     if (result.error && result.error.code === "ENOENT") continue;
+
     const combinedOutput = `${result.stdout || ""}\n${result.stderr || ""}`.toLowerCase();
+
+    // Shell "command not found" output — scanner not installed
     if (
       result.status !== 0 &&
       (combinedOutput.includes("not recognized") ||
@@ -27,15 +32,26 @@ function runExternalScanner() {
     ) {
       continue;
     }
+
+    // Clean exit — no findings
     if (result.status === 0) {
       console.log(`${scanner.command} completed without verified findings.`);
       return true;
     }
-    if (result.status !== null) {
-      process.stdout.write(result.stdout || "");
-      process.stderr.write(result.stderr || "");
+
+    // Non-zero exit with stdout output: scanner found something — report and halt
+    if (result.stdout && result.stdout.trim()) {
+      process.stdout.write(result.stdout);
+      if (result.stderr) process.stderr.write(result.stderr);
       process.exit(result.status);
     }
+
+    // Non-zero exit with no stdout: likely a scanner configuration or runtime error.
+    // Log the warning and fall through to the next scanner or the regex fallback.
+    process.stderr.write(
+      `Warning: ${scanner.command} exited with status ${result.status} but produced no findings output. ` +
+        `This may be a scanner configuration error. Stderr: ${(result.stderr || "").trim() || "(empty)"}\n`
+    );
   }
   return false;
 }

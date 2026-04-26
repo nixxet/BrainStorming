@@ -33,6 +33,10 @@ function checkState(data, filePath, errors) {
   checkRequired(stateSchema, data, filePath, errors);
   const rel = path.relative(repoRoot, filePath);
 
+  if (data.schema_version && data.schema_version !== "1") {
+    errors.push(`${rel}: schema_version "${data.schema_version}" is not recognized (expected "1")`);
+  }
+
   if (data.topic_slug && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(data.topic_slug)) {
     errors.push(`${rel}: topic_slug must be kebab-case`);
   }
@@ -51,13 +55,22 @@ function checkEvidence(data, filePath, errors) {
   checkRequired(evidenceSchema, data, filePath, errors);
   const rel = path.relative(repoRoot, filePath);
 
+  if (!data.schema_version) {
+    errors.push(`${rel}: missing schema_version (expected "1") — add "schema_version": "1" to migrate`);
+  } else if (data.schema_version !== "1") {
+    errors.push(`${rel}: schema_version "${data.schema_version}" is not recognized (expected "1")`);
+  }
+
   if (!Array.isArray(data.findings)) {
     errors.push(`${rel}: findings must be an array`);
     return;
   }
+  const validConfidence = new Set(["HIGH", "MEDIUM", "LOW", "UNVERIFIED"]);
   for (const finding of data.findings) {
     if (!finding.id) errors.push(`${rel}: finding is missing id`);
-    if (finding.confidence && !["HIGH", "MEDIUM", "LOW", "UNVERIFIED"].includes(finding.confidence)) {
+    if (!finding.confidence) {
+      errors.push(`${rel}: finding ${finding.id || "(no id)"} is missing required confidence field`);
+    } else if (!validConfidence.has(finding.confidence)) {
       errors.push(`${rel}: finding ${finding.id} has invalid confidence "${finding.confidence}"`);
     }
   }

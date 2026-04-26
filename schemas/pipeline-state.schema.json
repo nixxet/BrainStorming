@@ -1,11 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.local/brainstorming/pipeline-state.schema.json",
+  "$id": "https://brainstorming.local/schemas/pipeline-state.schema.json",
   "title": "BrainStorming Pipeline State",
   "type": "object",
   "required": ["topic_slug", "workflow", "current_date", "phases", "run_metrics", "errors"],
   "additionalProperties": true,
   "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1",
+      "description": "Schema version for migration detection. Must be \"1\"."
+    },
     "topic_slug": {
       "type": "string",
       "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
@@ -73,6 +78,10 @@
         },
         "verdict": {
           "type": ["string", "null"]
+        },
+        "token_cost_usd": {
+          "type": "number",
+          "description": "Estimated USD cost for this phase (populated by Director after phase completes)."
         }
       }
     }

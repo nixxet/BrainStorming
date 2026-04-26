@@ -1,11 +1,16 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.local/brainstorming/evidence.schema.json",
+  "$id": "https://brainstorming.local/schemas/evidence.schema.json",
   "title": "BrainStorming Evidence Contract",
   "type": "object",
   "required": ["topic_slug", "findings"],
   "additionalProperties": true,
   "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1",
+      "description": "Schema version for migration detection. Must be \"1\"."
+    },
     "topic_slug": {
       "type": "string",
       "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
@@ -32,7 +37,7 @@
   "$defs": {
     "finding": {
       "type": "object",
-      "required": ["id"],
+      "required": ["id", "confidence"],
       "additionalProperties": true,
       "properties": {
         "id": { "type": "string" },
@@ -42,6 +47,10 @@
         "confidence": {
           "type": "string",
           "enum": ["HIGH", "MEDIUM", "LOW", "UNVERIFIED"]
+        },
+        "generated_by_phase": {
+          "type": "string",
+          "description": "Phase or agent that produced this finding (e.g. phase_1_researcher)."
         },
         "must_survive": { "type": "boolean" },
         "source_count": { "type": "number" },
