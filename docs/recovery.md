@@ -32,7 +32,7 @@ Do not edit published topic content unless the validator reveals a real content 
 Symptoms:
 
 - `npm run verify-citations:all` exits non-zero.
-- Citation report shows `DEAD`, `DNS_ERROR`, `TIMEOUT`, or blocked network targets.
+- Citation report shows actionable status classes such as `DEAD`, `DNS_ERROR`, `TLS_ERROR`, `TIMEOUT`, `HTTP_SERVER_ERROR`, `REDIRECT_BLOCKED`, `BLOCKED_PRIVATE_NETWORK`, `BLOCKED_UNSUPPORTED_PROTOCOL`, or `UNKNOWN_ERROR`.
 
 Diagnosis:
 

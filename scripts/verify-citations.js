@@ -11,8 +11,8 @@
  *   node scripts/verify-citations.js --help
  *
  * Exit codes:
- *   0 — all URLs OK, REDIRECT_OK, WARN_AUTH, or WARN_PLACEHOLDER
- *   1 — any DEAD, TIMEOUT, or ERROR URLs found
+ *   0 - all URLs OK, REDIRECT_OK, HTTP_FORBIDDEN, or WARN_PLACEHOLDER
+ *   1 - any failed URL class found
  */
 
 const fs = require('fs');
@@ -21,6 +21,13 @@ const https = require('node:https');
 const http = require('node:http');
 const dns = require('node:dns').promises;
 const net = require('node:net');
+const {
+  CITATION_COUNT_KEYS,
+  classifyHttpStatus,
+  classifyRequestError,
+  citationCountKey,
+  isFailedCitationStatus,
+} = require('./lib/citation-status');
 
 const ROOT       = path.join(__dirname, '..');
 const TOPICS_DIR = path.join(ROOT, 'topics');
@@ -61,7 +68,7 @@ CLAIM-ABSENT, or CLAIM-UNVERIFIABLE (when link text is too short to verify meani
 This is text-match verification — not semantic verification. A CLAIM-ABSENT result means
 the specific phrasing used in the link text was not found; it does not prove the claim is false.
 
-Exit codes: 0 = all pass/warn  |  1 = any DEAD, TIMEOUT, ERROR, or CLAIM-ABSENT
+Exit codes: 0 = all pass/warn  |  1 = any failed URL class or CLAIM-ABSENT
 `);
   process.exit(0);
 }
@@ -195,7 +202,7 @@ async function assertSafeUrl(url) {
   try {
     parsed = new URL(url);
   } catch {
-    return { safe: false, status: 'ERROR', note: 'invalid url' };
+    return { safe: false, status: 'UNKNOWN_ERROR', note: 'invalid url' };
   }
 
   if (!['http:', 'https:'].includes(parsed.protocol)) {
@@ -248,10 +255,19 @@ async function fetchFollowRedirects(url, method) {
     const result = await makeRequest(current, method, hops);
 
     if (result.maxRedirectsExceeded) {
-      return { statusCode: result.statusCode, finalUrl: current, error: 'MAX_REDIRECTS' };
+      return { statusCode: result.statusCode, finalUrl: current, error: 'REDIRECT_BLOCKED', note: 'max redirects exceeded' };
     }
 
     if (result.redirect) {
+      const redirectSafety = await assertSafeUrl(result.nextUrl);
+      if (!redirectSafety.safe) {
+        return {
+          statusCode: null,
+          finalUrl: result.nextUrl,
+          error: 'REDIRECT_BLOCKED',
+          note: `redirect target ${redirectSafety.status}: ${redirectSafety.note}`,
+        };
+      }
       current = result.nextUrl;
       hops = result.redirectCount;
       continue;
@@ -260,7 +276,7 @@ async function fetchFollowRedirects(url, method) {
     return { statusCode: result.statusCode, finalUrl: result.finalUrl, redirects: hops };
   }
 
-  return { statusCode: null, finalUrl: current, error: 'MAX_REDIRECTS' };
+  return { statusCode: null, finalUrl: current, error: 'REDIRECT_BLOCKED', note: 'max redirects exceeded' };
 }
 
 /**
@@ -280,33 +296,18 @@ async function checkUrl(url, sourceFile) {
     try {
       const result = await fetchFollowRedirects(url, method);
 
-      if (result.error === 'MAX_REDIRECTS') {
-        return { ...base, status: 'ERROR', method_used: method, final_url: result.finalUrl, note: 'max redirects exceeded' };
-      }
-      if (['DNS_ERROR', 'BLOCKED_PRIVATE_NETWORK', 'BLOCKED_UNSUPPORTED_PROTOCOL'].includes(result.error)) {
+      if (['DNS_ERROR', 'BLOCKED_PRIVATE_NETWORK', 'BLOCKED_UNSUPPORTED_PROTOCOL', 'REDIRECT_BLOCKED', 'UNKNOWN_ERROR'].includes(result.error)) {
         return { ...base, status: result.error, method_used: method, final_url: result.finalUrl, note: result.note };
       }
 
       const code = result.statusCode;
       const hops = result.redirects ?? 0;
-
-      let status;
-      if (code >= 200 && code < 300) {
-        status = hops > 0 ? 'REDIRECT_OK' : 'OK';
-      } else if (code === 401 || code === 403) {
-        status = 'WARN_AUTH';
-      } else if (code >= 400 && code < 600) {
-        status = 'DEAD';
-      } else {
-        status = 'ERROR';
-      }
+      const status = classifyHttpStatus(code, hops);
 
       return { ...base, status, http_code: code, final_url: result.finalUrl, method_used: method };
     } catch (err) {
-      if (err.message === 'TIMEOUT') {
-        return { ...base, status: 'TIMEOUT', method_used: method };
-      }
-      return { ...base, status: 'ERROR', method_used: method, note: err.message };
+      const status = classifyRequestError(err);
+      return { ...base, status, method_used: method, note: err.code || err.message };
     }
   };
 
@@ -314,12 +315,12 @@ async function checkUrl(url, sourceFile) {
   let result = await attempt('HEAD');
 
   // If HEAD returns 405, or connection error: retry with GET
-  if (result.http_code === 405 || (result.status === 'ERROR' && result.http_code === null)) {
+  if (result.http_code === 405 || (result.status === 'UNKNOWN_ERROR' && result.http_code === null)) {
     result = await attempt('GET');
   }
 
   // Raw GitHub: retry once after delay on any failure
-  if (isRawGitHub && (result.status === 'DEAD' || result.status === 'ERROR' || result.status === 'TIMEOUT')) {
+  if (isRawGitHub && isFailedCitationStatus(result.status)) {
     await new Promise(r => setTimeout(r, RAW_GH_RETRY_DELAY_MS));
     result = await attempt('GET');
   }
@@ -538,18 +539,9 @@ async function verifyTopic(slug) {
 }
 
 function buildReport(slug, date, results) {
-  const counts = { ok: 0, redirect_ok: 0, warn_auth: 0, warn_placeholder: 0, timeout: 0, dead: 0, error: 0, blocked: 0, dns_error: 0 };
+  const counts = Object.fromEntries(CITATION_COUNT_KEYS.map(key => [key, 0]));
   for (const r of results) {
-    const key = r.status.toLowerCase().replace('_ok', '_ok').replace('warn_', 'warn_');
-    if (key === 'ok') counts.ok++;
-    else if (key === 'redirect_ok') counts.redirect_ok++;
-    else if (key === 'warn_auth') counts.warn_auth++;
-    else if (key === 'warn_placeholder') counts.warn_placeholder++;
-    else if (key === 'timeout') counts.timeout++;
-    else if (key === 'dead') counts.dead++;
-    else if (key.startsWith('blocked')) counts.blocked++;
-    else if (key === 'dns_error') counts.dns_error++;
-    else if (key === 'error') counts.error++;
+    counts[citationCountKey(r.status)] += 1;
   }
 
   // Claim-check counts (only populated when --claim-check was used)
@@ -571,14 +563,14 @@ function buildReport(slug, date, results) {
 }
 
 function printReport(report) {
-  const { topic_slug: slug, checked_on, total_urls, ok, redirect_ok, warn_auth, warn_placeholder, timeout, dead, error, blocked, dns_error } = report;
+  const { topic_slug: slug, checked_on, total_urls } = report;
   console.log(`\n# Citation Check: ${slug} — ${checked_on}`);
   console.log(`\n${SCOPE_BOUNDARY}\n`);
-  console.log(`Total: ${total_urls} | OK: ${ok} | Redirect OK: ${redirect_ok} | Dead: ${dead} | Timeout: ${timeout} | DNS: ${dns_error} | Blocked: ${blocked} | Error: ${error} | Auth-Gated: ${warn_auth} | Placeholder: ${warn_placeholder}`);
+  console.log(`Total: ${total_urls} | OK: ${report.ok} | Redirect OK: ${report.redirect_ok} | Dead: ${report.dead} | Timeout: ${report.timeout} | DNS: ${report.dns_error} | TLS: ${report.tls_error} | Forbidden: ${report.http_forbidden} | Server Error: ${report.http_server_error} | Redirect Blocked: ${report.redirect_blocked} | Private Blocked: ${report.private_network_blocked} | Unsupported: ${report.unsupported_protocol} | Unknown: ${report.unknown_error} | Placeholder: ${report.warn_placeholder}`);
 
-  const failed = report.results.filter(r => ['DEAD','TIMEOUT','ERROR','DNS_ERROR','BLOCKED_PRIVATE_NETWORK','BLOCKED_UNSUPPORTED_PROTOCOL'].includes(r.status));
+  const failed = report.results.filter(r => isFailedCitationStatus(r.status));
   if (failed.length > 0) {
-    console.log(`\n## Dead / Failed URLs`);
+    console.log(`\n## URLs Requiring Action`);
     for (const r of failed) {
       const code = r.http_code ? ` (${r.http_code})` : '';
       console.log(`- [${r.source_file}] ${r.status}${code}: ${r.url}`);
@@ -607,7 +599,7 @@ function printReport(report) {
 
 function hasFailed(report) {
   return report.results.some(r =>
-    ['DEAD','TIMEOUT','ERROR','DNS_ERROR','BLOCKED_PRIVATE_NETWORK','BLOCKED_UNSUPPORTED_PROTOCOL'].includes(r.status) ||
+    isFailedCitationStatus(r.status) ||
     (claimCheckMode && r.claim_verdict === 'CLAIM-ABSENT')
   );
 }
@@ -654,10 +646,10 @@ async function main() {
     aggLines.push(``);
     aggLines.push(`> ${SCOPE_BOUNDARY}`);
     aggLines.push(``);
-    aggLines.push(`| Topic | Total | OK | Redirect | Dead | Timeout | DNS | Blocked | Error | Auth | Placeholder |`);
-    aggLines.push(`|-------|-------|----|----------|------|---------|-----|---------|-------|------|-------------|`);
+    aggLines.push(`| Topic | Total | OK | Redirect | Dead | Timeout | DNS | TLS | Forbidden | Server | Redirect Blocked | Private Blocked | Unsupported | Unknown | Placeholder |`);
+    aggLines.push(`|-------|-------|----|----------|------|---------|-----|-----|-----------|--------|------------------|-----------------|-------------|---------|-------------|`);
     for (const r of reports) {
-      aggLines.push(`| ${r.topic_slug} | ${r.total_urls} | ${r.ok} | ${r.redirect_ok} | ${r.dead} | ${r.timeout} | ${r.dns_error} | ${r.blocked} | ${r.error} | ${r.warn_auth} | ${r.warn_placeholder} |`);
+      aggLines.push(`| ${r.topic_slug} | ${r.total_urls} | ${r.ok} | ${r.redirect_ok} | ${r.dead} | ${r.timeout} | ${r.dns_error} | ${r.tls_error} | ${r.http_forbidden} | ${r.http_server_error} | ${r.redirect_blocked} | ${r.private_network_blocked} | ${r.unsupported_protocol} | ${r.unknown_error} | ${r.warn_placeholder} |`);
     }
     aggLines.push(``);
 
@@ -667,7 +659,7 @@ async function main() {
       aggLines.push(``);
       for (const r of failedTopics) {
         aggLines.push(`### ${r.topic_slug}`);
-        for (const res of r.results.filter(x => ['DEAD','TIMEOUT','ERROR','DNS_ERROR','BLOCKED_PRIVATE_NETWORK','BLOCKED_UNSUPPORTED_PROTOCOL'].includes(x.status))) {
+        for (const res of r.results.filter(x => isFailedCitationStatus(x.status))) {
           const code = res.http_code ? ` (${res.http_code})` : '';
           aggLines.push(`- [${res.source_file}] ${res.status}${code}: ${res.url}`);
         }

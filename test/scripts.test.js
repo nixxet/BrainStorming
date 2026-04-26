@@ -8,6 +8,12 @@ const { parseFrontmatter } = require("../scripts/lib/topic-utils");
 const { parseMarkdownRow, parseRowsAfterHeader } = require("../scripts/lib/markdown-table");
 const { readPipelineState } = require("../scripts/lib/pipeline-state");
 const { isValidTopicSlug, resolveInside, statePathForTopic } = require("../scripts/lib/safe-paths");
+const {
+  classifyHttpStatus,
+  classifyRequestError,
+  citationCountKey,
+  isFailedCitationStatus,
+} = require("../scripts/lib/citation-status");
 
 const repoRoot = path.resolve(__dirname, "..");
 const fixtureRoot = path.join(__dirname, "fixtures", "topics");
@@ -198,6 +204,22 @@ test("citation checker blocks private network URLs", () => {
   } finally {
     fs.rmSync(topicDir, { recursive: true, force: true });
   }
+});
+
+test("citation status helper separates verifier failures from dead links", () => {
+  assert.equal(classifyHttpStatus(200, 0), "OK");
+  assert.equal(classifyHttpStatus(200, 1), "REDIRECT_OK");
+  assert.equal(classifyHttpStatus(403, 0), "HTTP_FORBIDDEN");
+  assert.equal(classifyHttpStatus(404, 0), "DEAD");
+  assert.equal(classifyHttpStatus(503, 0), "HTTP_SERVER_ERROR");
+  assert.equal(classifyRequestError(new Error("TIMEOUT")), "TIMEOUT");
+  assert.equal(classifyRequestError({ code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE" }), "TLS_ERROR");
+  assert.equal(classifyRequestError({ code: "ENOTFOUND" }), "DNS_ERROR");
+  assert.equal(classifyRequestError({ code: "ECONNRESET" }), "UNKNOWN_ERROR");
+  assert.equal(citationCountKey("REDIRECT_BLOCKED"), "redirect_blocked");
+  assert.equal(citationCountKey("BLOCKED_PRIVATE_NETWORK"), "private_network_blocked");
+  assert.equal(isFailedCitationStatus("HTTP_FORBIDDEN"), false);
+  assert.equal(isFailedCitationStatus("HTTP_SERVER_ERROR"), true);
 });
 
 test("leadership index generator writes decision metadata", () => {
