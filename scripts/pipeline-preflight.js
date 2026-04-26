@@ -6,7 +6,7 @@ purpose: Verify a topic is ready for a pipeline run before any research work sta
 
 const fs = require("fs");
 const path = require("path");
-const { execSync } = require("child_process");
+const { runNodeScript } = require("./lib/process-runner");
 
 const repoRoot = path.resolve(__dirname, "..");
 const topicsRoot = path.join(repoRoot, "topics");
@@ -102,19 +102,22 @@ function detectIncompleteRun(topicDir) {
 
 function runValidateState(slug) {
   try {
-    const args = slug ? `--topic ${slug} --json` : "--json";
-    const out = execSync(`node "${path.join(__dirname, "validate-pipeline-state.js")}" ${args}`, {
+    const scriptPath = path.join(__dirname, "validate-pipeline-state.js");
+    const args = slug ? ["--topic", slug, "--json"] : ["--json"];
+    const result = runNodeScript(scriptPath, args, {
       cwd: repoRoot,
       timeout: 10000,
-      encoding: "utf8",
     });
-    const data = JSON.parse(out);
+    if (result.status !== 0) {
+      return { ran: false, error: result.stderr || result.stdout };
+    }
+    const data = JSON.parse(result.stdout);
     const target = slug
       ? data.results.find((r) => r.slug === slug)
       : null;
     return { ran: true, topicsWithIssues: data.topicsWithIssues, topicResult: target };
-  } catch {
-    return { ran: false };
+  } catch (error) {
+    return { ran: false, error: error.message };
   }
 }
 
@@ -183,7 +186,7 @@ function main() {
       const issues = stateResult.topicResult.issues || [];
       check("state-integrity", issues.length > 0 ? "WARN" : "INFO",
         issues.length === 0,
-        `state.json has ${issues.length} integrity issues. Run: npm run validate-pipeline-state:write`);
+        `state.json has ${issues.length} integrity issues. Run: npm run validate-pipeline-state:repair`);
     }
 
     // 7. Archive status check
@@ -199,7 +202,7 @@ function main() {
   if (globalState.ran) {
     check("global-state-health", globalState.topicsWithIssues > 5 ? "WARN" : "INFO",
       globalState.topicsWithIssues <= 5,
-      `${globalState.topicsWithIssues} topics have state.json integrity issues. Run validate-pipeline-state:write before long sessions.`);
+      `${globalState.topicsWithIssues} topics have state.json integrity issues. Run validate-pipeline-state:repair before long sessions.`);
   }
 
   outputResult(args, checks, hasFatal, hasWarning);

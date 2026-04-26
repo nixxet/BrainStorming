@@ -129,6 +129,22 @@ test("validate-pipeline-state reports malformed fixture state", () => {
   }
 });
 
+test("pipeline preflight runs state validation through shared process runner", () => {
+  const slug = "valid-topic";
+  const topicDir = installFixtureTopic(slug);
+
+  try {
+    const result = run(["scripts/pipeline-preflight.js", slug, "--mode", "evaluate", "--re-evaluate", "--json"]);
+    assert.equal(result.status, 0, result.stderr);
+
+    const payload = JSON.parse(result.stdout);
+    assert.equal(payload.status, "PASS");
+    assert.ok(payload.checks.some(check => check.name === "state-integrity" && check.passed));
+  } finally {
+    fs.rmSync(topicDir, { recursive: true, force: true });
+  }
+});
+
 test("schema validator accepts current topic state and evidence contracts", () => {
   const result = run(["scripts/validate-schemas.js"]);
   assert.equal(result.status, 0, result.stderr);
