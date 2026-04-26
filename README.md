@@ -90,6 +90,7 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 | `npm run bench-report` | Generate a quality benchmark report |
 | `npm run trend-report` | Generate an operations trend report from benchmark and citation data |
 | `npm run claims:check` | Heuristically flag claim-like lines that need direct source review |
+| `npm run claims:check:strict` | Fail when published claims lack direct, registry, nearby, or internal-analysis support |
 | `npm run verify-citations -- --topic {slug}` | Check URL reachability for one topic |
 | `npm run verify-citations:all` | Check URL reachability across topics |
 | `npm run verify-citations:all -- --concurrency 5 --cache --cache-ttl-days 7` | Check citations with bounded concurrency and TTL URL cache |
@@ -101,7 +102,7 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 ## Quickstart
 
 1. Start a topic through Claude Code, for example: `/evaluate "Tool X for use case Y"`.
-2. Validate local health: `npm run preflight:all`.
+2. Validate local health, including strict claim-support checks: `npm run preflight:all`.
 3. Optionally verify network citations: `npm run preflight:network`.
 4. Generate a benchmark report when needed: `npm run bench-report`.
 5. Generate leadership views when needed: `npm run index:leadership && npm run dashboard && npm run trend-report`.

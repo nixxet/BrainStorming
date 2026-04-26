@@ -66,7 +66,7 @@ created: 2026-04-24
   - **Mitigation:** Verify MarkItDown version ≥0.1.4 and scan for locked mammoth versions in requirements.txt/poetry.lock.
   — [GitHub Security Advisory GHSA-rmjr-87wv-gf87](https://github.com/advisories/GHSA-rmjr-87wv-gf87), [Snyk SNYK-JS-MAMMOTH-13554470](https://snyk.io/), [NVD CVE-2025-11849](https://nvd.nist.gov/), [GitHub PR #1520](https://github.com/microsoft/markitdown/pull/1520)
 
-- **[HIGH — PATCHED]** XXE Vulnerability (XML External Entity Attack): Fixed v0.1.2+
+- **[HIGH — PATCHED]** XXE Vulnerability (XML External Entity Attack): Fixed v0.1.2+ — [GitHub releases](https://github.com/microsoft/markitdown/releases)
   - **Details:** MarkItDown had XXE vulnerability in DOCX/XLSX/PPTX processing. Untrusted Office files with XXE payloads could read arbitrary files or trigger DoS.
   - **Fix:** Fixed in v0.1.2 (May 2024) by switching from stdlib minidom to defusedxml library. Responsible fix.
   - **Current Status:** XXE mitigated for v0.1.2+. Indicates file parsing is a persistent risk area.

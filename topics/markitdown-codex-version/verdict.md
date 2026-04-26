@@ -23,7 +23,7 @@ MarkItDown is easy to try, actively maintained, permissively licensed, and aimed
 
 - HIGH: Process-privileged I/O can expose local files or internal network resources if untrusted inputs are passed without validation. Source: [GitHub repository](https://github.com/microsoft/markitdown)
 - HIGH: MCP use can expose local file and remote URI conversion if the server is available outside a trusted local context. Source: [MCP README](https://raw.githubusercontent.com/microsoft/markitdown/main/packages/markitdown-mcp/README.md)
-- MEDIUM: Extraction quality is format- and document-dependent; primary sources do not provide a broad benchmark.
+- MEDIUM: Extraction quality is format- and document-dependent; primary sources do not provide a broad benchmark. Source: internal analysis of listed primary sources.
 - MEDIUM: The `[all]` install expands dependency and vulnerability scanning scope. Source: [pyproject metadata](https://raw.githubusercontent.com/microsoft/markitdown/main/packages/markitdown/pyproject.toml)
 - MEDIUM: Beta metadata means future API or behavior changes remain plausible. Source: [pyproject metadata](https://raw.githubusercontent.com/microsoft/markitdown/main/packages/markitdown/pyproject.toml)
 

@@ -95,6 +95,7 @@ test("claim support checker emits parseable JSON summary", () => {
   const payload = JSON.parse(result.stdout);
   assert.ok(payload.summary.topics_checked >= 2);
   assert.ok(Number.isInteger(payload.summary.claims_checked));
+  assert.equal(payload.summary.needs_review, 0);
   assert.ok(Array.isArray(payload.topics));
 });
 

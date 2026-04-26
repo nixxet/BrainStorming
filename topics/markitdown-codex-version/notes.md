@@ -35,8 +35,8 @@ For MCP use, keep the server local or containerized unless additional authorizat
 
 ## Gaps
 
-- MEDIUM: Primary sources do not provide a broad extraction-quality benchmark across representative file corpora.
-- MEDIUM: High popularity and Microsoft maintenance do not remove the need for dependency scanning and output QA.
+- MEDIUM: Primary sources do not provide a broad extraction-quality benchmark across representative file corpora. Source: internal analysis of listed primary sources.
+- MEDIUM: High popularity and Microsoft maintenance do not remove the need for dependency scanning and output QA. Source: internal analysis of listed primary sources.
 
 ## Sources
 

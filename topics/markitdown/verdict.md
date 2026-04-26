@@ -21,7 +21,7 @@ created: 2026-04-24
 **Do NOT use MarkItDown (select Docling or Unstructured instead) IF:**
 - Table extraction critical: Corpus is table-heavy (financial reports, scientific papers, legal documents) — **[HIGH]** [Systenics, GitHub issue #41]
 - Accuracy SLA >70%: Fallback validation not operational feasible — **[HIGH]** [ChatForest]
-- Untrusted input: Documents are adversarial or from untrusted sources without upstream validation layer — **[HIGH]** [CVE-2025-11849, XXE history]
+- Untrusted input: Documents are adversarial or from untrusted sources without upstream validation layer — **[HIGH]** [CVE-2025-11849](https://github.com/advisories/GHSA-rmjr-87wv-gf87), [XXE history](https://github.com/microsoft/markitdown/releases)
 - PDF-dominant: Corpus >50% scanned PDFs or complex layouts — **[HIGH]** [ChatForest, DEV Community]
 - SLA critical: Enterprise requires Microsoft support guarantee (MarkItDown has none; 0.x stability risk) — **[MEDIUM]** [SemVer interpretation]
 - Multilingual required: Corpus includes CJK, RTL, or code-heavy documents (untested) — **[MEDIUM]** [gaps analysis]
@@ -121,7 +121,7 @@ The recommendation to **CONDITIONAL ADOPT MarkItDown** would be **INVALIDATED** 
 
 - **[HIGH]** 47% accuracy baseline requires fallback validation. Nearly 50% of documents may require fallback processing (Docling, Azure Document Intelligence, manual review). Do NOT treat 47% as acceptable without fallback chain. **Mitigation:** Implement conversion validation and fallback logic; budget for optional costs (Azure DI, LLM API). — [ChatForest]
 
-- **[HIGH]** Table extraction failure is architectural. GitHub issue #41 (open since 2024) documents that MarkItDown "doesn't include tables, no structure." Extracts columns separately, destroying row-column correlation. Not a bug; by design. **Mitigation:** For table-rich documents, use Docling or post-processing. — [Systenics, GitHub #41]
+- **[HIGH]** Table extraction failure is architectural. GitHub issue #41 (open since 2024) documents that MarkItDown "doesn't include tables, no structure." Extracts columns separately, destroying row-column correlation. Not a bug; by design. **Mitigation:** For table-rich documents, use Docling or post-processing. — [Systenics](https://systenics.com/), [GitHub #41](https://github.com/microsoft/markitdown/issues/41)
 
 - **[MEDIUM]** MCP SSRF risk: MarkItDown MCP server (markitdown-mcp) exposes `convert_to_markdown(uri)` without built-in URI validation. MCP deployments to untrusted clients require URI scheme/path allowlists implemented UPSTREAM. Python library itself (`convert_local`, `convert_response`) is safe. **Mitigation:** Add URI allowlists upstream; restrict schemes to http/https only; add Authorization layer. — [BlueRock, GitHub MCP README]
 

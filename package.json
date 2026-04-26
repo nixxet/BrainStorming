@@ -12,7 +12,7 @@
     "check-syntax": "node scripts/check-scripts.js",
     "test": "node --test",
     "validate": "npm run check:scripts && npm run topic-validate:all && npm run validate-pipeline-state && npm run validate:schemas",
-    "preflight:all": "npm run validate && npm run check-staleness -- --json && npm test",
+    "preflight:all": "npm run validate && npm run check-staleness -- --json && npm run claims:check:strict && npm test",
     "preflight:network": "node scripts/verify-citations.js --all --concurrency 5 --cache --cache-ttl-days 7",
     "security:secrets": "node scripts/secret-scan.js",
     "export:public": "node scripts/export-public.js",
