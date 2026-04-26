@@ -5,6 +5,7 @@ const path = require("node:path");
 const test = require("node:test");
 
 const { parseFrontmatter } = require("../scripts/lib/topic-utils");
+const { parseMarkdownRow, parseRowsAfterHeader } = require("../scripts/lib/markdown-table");
 
 const repoRoot = path.resolve(__dirname, "..");
 const fixtureRoot = path.join(__dirname, "fixtures", "topics");
@@ -31,6 +32,21 @@ test("frontmatter parser handles fixture markdown with CRLF line endings", () =>
 
   assert.equal(frontmatter.title, "Fixture Valid Topic - Overview");
   assert.equal(frontmatter.created, "2026-04-24");
+});
+
+test("markdown table helper parses rows after a matching header", () => {
+  const table = [
+    "| Topic | Status | Verdict |",
+    "| --- | --- | --- |",
+    "| [Fixture](topics/fixture/) | Published | Adopt |",
+    "",
+  ].join("\n");
+
+  assert.deepEqual(parseMarkdownRow("| A | B |"), ["A", "B"]);
+  const rows = parseRowsAfterHeader(table, cells => cells[0] === "Topic");
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].cells[0], "[Fixture](topics/fixture/)");
+  assert.equal(rows[0].lineIndex, 2);
 });
 
 test("check-staleness --json emits parseable topic freshness data", () => {

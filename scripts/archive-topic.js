@@ -6,6 +6,7 @@ purpose: Move a topic row between index.md and archived-topics.md cleanly, or re
 
 const fs = require("fs");
 const path = require("path");
+const { parseRowsAfterHeader } = require("./lib/markdown-table");
 
 const repoRoot = path.resolve(__dirname, "..");
 const indexPath = path.join(repoRoot, "index.md");
@@ -58,28 +59,7 @@ function readFile(p) {
 }
 
 function parseTableRows(content) {
-  const rows = [];
-  const lines = content.split("\n");
-  let inTable = false;
-  let headerSeen = false;
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (line.startsWith("| Topic") || line.startsWith("|Topic")) {
-      inTable = true;
-      headerSeen = false;
-      continue;
-    }
-    if (inTable && line.startsWith("|---")) {
-      headerSeen = true;
-      continue;
-    }
-    if (inTable && headerSeen && line.startsWith("|")) {
-      rows.push({ lineIndex: i, raw: lines[i] });
-    } else if (inTable && line === "") {
-      inTable = false;
-    }
-  }
-  return rows;
+  return parseRowsAfterHeader(content, cells => cells[0] === "Topic");
 }
 
 function slugFromRow(raw) {

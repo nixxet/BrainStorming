@@ -12,6 +12,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { parseRowsAfterHeader } = require('./lib/markdown-table');
 
 if (process.argv.includes('--help') || process.argv.includes('-h')) {
   console.log(`Usage: node scripts/bench-diff.js [options]
@@ -53,10 +54,9 @@ function parseReport(filepath) {
   const tableSection = text.match(/## Per-Topic Table([\s\S]*?)(?=^## |\Z)/m);
   if (!tableSection) return rows;
 
-  const lines = tableSection[1].split('\n');
-  for (const line of lines) {
-    if (!line.startsWith('|')) continue;
-    const cells = line.split('|').map(c => c.trim()).filter((c, i) => i > 0);
+  const tableRows = parseRowsAfterHeader(tableSection[1], cells => cells[0] === 'Topic');
+  for (const row of tableRows) {
+    const cells = row.cells;
     if (cells.length < 5) continue;
     const slug = cells[0];
     if (!slug || slug === 'Topic' || slug.startsWith('---')) continue;
