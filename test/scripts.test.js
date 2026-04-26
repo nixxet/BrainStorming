@@ -34,6 +34,64 @@ test("validate-pipeline-state skips reserved metadata directories", () => {
   assert.ok(!payload.results.some(topic => topic.slug === "_meta"));
 });
 
+test("validate-pipeline-state repair previews before writing", () => {
+  const slug = "state-repair-test";
+  const topicDir = path.join(repoRoot, "topics", slug);
+  const pipelineDir = path.join(topicDir, "_pipeline");
+  const statePath = path.join(pipelineDir, "state.json");
+
+  fs.rmSync(topicDir, { recursive: true, force: true });
+  fs.mkdirSync(pipelineDir, { recursive: true });
+
+  const initialState = {
+    topic_slug: slug,
+    phases: {
+      phase_4: {
+        status: "pending",
+        final_score: 0,
+        verdict: null,
+      },
+    },
+    run_metrics: {
+      final_score: 0,
+    },
+    errors: [],
+  };
+
+  try {
+    fs.writeFileSync(path.join(topicDir, "overview.md"), "# State Repair Test\n", "utf8");
+    fs.writeFileSync(path.join(topicDir, "notes.md"), "# Notes\n", "utf8");
+    fs.writeFileSync(path.join(topicDir, "verdict.md"), "# Verdict\n", "utf8");
+    fs.writeFileSync(statePath, `${JSON.stringify(initialState, null, 2)}\n`, "utf8");
+    fs.writeFileSync(
+      path.join(pipelineDir, "scorecard.md"),
+      "**Weighted Total:** 8.25\n\n**Verdict:** PASS\n",
+      "utf8"
+    );
+
+    const preview = run(["scripts/validate-pipeline-state.js", "--topic", slug, "--repair", "--json"]);
+    assert.equal(preview.status, 0, preview.stderr);
+    const previewPayload = JSON.parse(preview.stdout);
+    assert.equal(previewPayload.topicsWithIssues, 1);
+    assert.equal(previewPayload.topicsUpdated, 0);
+    assert.ok(previewPayload.results[0].issues.some(issue => issue.includes("phase_4.status")));
+    assert.equal(JSON.parse(fs.readFileSync(statePath, "utf8")).phases.phase_4.status, "pending");
+
+    const write = run(["scripts/validate-pipeline-state.js", "--topic", slug, "--repair", "--write", "--json"]);
+    assert.equal(write.status, 0, write.stderr);
+    const writePayload = JSON.parse(write.stdout);
+    assert.equal(writePayload.topicsUpdated, 1);
+    assert.ok(writePayload.results[0].appliedFixes.some(fix => fix.includes("phase_4.status")));
+
+    const repaired = JSON.parse(fs.readFileSync(statePath, "utf8"));
+    assert.equal(repaired.phases.phase_4.status, "completed");
+    assert.equal(repaired.phases.phase_4.final_score, 8.25);
+    assert.equal(repaired.run_metrics.final_score, 8.25);
+  } finally {
+    fs.rmSync(topicDir, { recursive: true, force: true });
+  }
+});
+
 test("schema validator accepts current topic state and evidence contracts", () => {
   const result = run(["scripts/validate-schemas.js"]);
   assert.equal(result.status, 0, result.stderr);

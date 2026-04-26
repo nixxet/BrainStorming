@@ -27,7 +27,7 @@
     "regenerate-index-dry": "node scripts/regenerate-index.js --dry-run",
     "validate-pipeline-state": "node scripts/validate-pipeline-state.js",
     "validate-pipeline-state:write": "node scripts/validate-pipeline-state.js --write",
-    "validate-pipeline-state:repair": "node scripts/validate-pipeline-state.js --write",
+    "validate-pipeline-state:repair": "node scripts/validate-pipeline-state.js --repair --write",
     "bench-report": "node scripts/bench-report.js",
     "verify-citations": "node scripts/verify-citations.js",
     "verify-citations:all": "node scripts/verify-citations.js --all",

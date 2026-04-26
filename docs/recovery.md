@@ -23,6 +23,8 @@ npm run validate-pipeline-state:repair
 npm run validate-pipeline-state
 ```
 
+`--repair` previews safe derived metadata corrections. `validate-pipeline-state:repair` adds the required `--write` flag and is the only command in this flow that mutates `state.json`.
+
 Do not edit published topic content unless the validator reveals a real content issue.
 
 ## Failed Citations
