@@ -2,7 +2,7 @@
 _archive/
 __ignore
 # ── Audit / sentinel reports (generated output, not source) ──────────────────
-_sentinal-report/
+_sentinel-report/
 
 # ── Certs ─────────────────────────────────────────────────────────────────────
 CERTS/

@@ -1,5 +1,5 @@
 # BrainStorming — Topic Index
 
 | Topic | Status | Verdict |
-|---|---|---|
-| [MarkItDown](topics/markitdown/) | Complete | Fit-for-purpose lightweight text extractor for simple English documents in LLM preprocessing; requires mandatory security patching and explicit production constraints. |
+|-------|--------|---------|
+| [MarkItDown](topics/markitdown/) | Complete 2026-04-26 | Recommendation: MarkItDown is a lightweight, fast text extractor for simple, trusted English-language documents in LLM preprocessing pipelines—with explicit constraints, mandatory security patching, a... |

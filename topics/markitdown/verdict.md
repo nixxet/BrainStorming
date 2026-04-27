@@ -5,11 +5,13 @@ created: 2026-04-26
 status: complete
 ---
 
+> *Note: Citations labeled `(internal)` refer to pipeline analysis artifacts — benchmarks, synthesis documents, and stress tests — stored in `_pipeline/`, which is excluded from public mirrors by design.*
+
 # MarkItDown — Verdict
 
 ## Recommendation
 
-**We recommend MarkItDown as a lightweight, fast text extractor for simple, trusted English-language documents in LLM preprocessing pipelines—with explicit constraints, mandatory security patching, and production hardening required.**
+**Recommendation:** MarkItDown is a lightweight, fast text extractor for simple, trusted English-language documents in LLM preprocessing pipelines—with explicit constraints, mandatory security patching, and production hardening required.
 
 MarkItDown is fit-for-purpose within its narrow design scope: English-language, simple internal documents (basic PDFs, plain office files) where speed and token efficiency matter. The 100x performance advantage over Docling is genuine and benchmarked [Deep-Dive Counter 5]. The 90% token savings vs HTML is a real strength for LLM consumption [Multiple independent sources].
 
@@ -17,7 +19,7 @@ MarkItDown is fit-for-purpose within its narrow design scope: English-language, 
 
 **Prompt-injection risk in LLM pipelines:** When feeding MarkItDown output to language models, treat document content as untrusted. Use prompt-engineering practices to isolate document content from system instructions: (a) Structure prompts with explicit delimiters (`[DOCUMENT START]...[DOCUMENT END]`), (b) Use system-prompt prefix that establishes instruction hierarchy, (c) Implement output guardrails to reject model responses that appear to leak prompts or system information.
 
-**We do not recommend MarkItDown for:**
+**Not recommended for:**
 - Production systems processing complex PDFs, structured tables, non-ASCII content, or untrusted input without substantial fallback mechanisms, post-processing, or tool replacement.
 - Any pipeline requiring accurate table structure preservation. Table extraction uses column-wise enumeration, rendering tables unusable for downstream analysis [HIGH confidence, applies to all formats].
 - Multilingual or non-English documents. The tool crashes on Cyrillic, CJK, and special Unicode [HIGH confidence, multiple GitHub issues].
@@ -154,5 +156,3 @@ Scored 9.02/10 against the R&R quality rubric (8-dimension, 8.0 = PASS).
 | Conciseness | 8/10 | 5% |
 
 **Verdict:** PASS | **Pipeline Artifacts:** `topics/markitdown/_pipeline/`
-
-**Token usage:** 965,249 subagent tokens across 9 agents (~$13.21 estimated at blended rates). Per-agent breakdown in `_pipeline/state.json` → `run_metrics.token_usage`. Director session tokens excluded — run `/cost` at pipeline end for full session total.

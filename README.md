@@ -82,7 +82,7 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 | `npm run preflight:all` | Run local syntax, topic, state, staleness, and test gates |
 | `npm run release:check` | Run local preflight, secret scan, and public export |
 | `npm run regenerate-index` | Rebuild topic indexes from published verdict files |
-| `npm run index:leadership` | Generate the leadership-facing `topics/index.md` |
+| `npm run index:summary` | Generate the summary `topics/index.md` (alias: `index:leadership`) |
 | `npm run dashboard` | Generate a local static dashboard under `dist/dashboard/` |
 | `npm run validate-pipeline-state` | Validate topic pipeline metadata when present |
 | `npm run validate:schemas` | Validate pipeline state and evidence files against repository schemas |
@@ -119,9 +119,9 @@ For detailed recovery guidance, see [docs/recovery.md](docs/recovery.md).
 
 1. Start a topic through Claude Code, for example: `/evaluate "Tool X for use case Y"`.
 2. Validate local health, including strict claim-support checks: `npm run preflight:all`.
-3. Optionally verify network citations: `npm run preflight:network`.
+3. Optionally verify network citations: `npm run preflight:network`. **Note: requires live internet access; runtime scales with citation count.**
 4. Generate a benchmark report when needed: `npm run bench-report`.
-5. Generate leadership views when needed: `npm run index:leadership && npm run dashboard && npm run trend-report`.
+5. Generate summary views when needed: `npm run index:summary && npm run dashboard && npm run trend-report`.
 6. Create a public-safe export: `npm run export:public`.
 
 ## Public Export Model

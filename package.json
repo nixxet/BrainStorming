@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "description": "Evidence-gated research pipeline and markdown knowledge base for evaluating technical tools and frameworks.",
   "license": "MIT",
-  "private": true,
   "engines": {
     "node": ">=22"
   },
@@ -16,8 +15,9 @@
     "preflight:network": "node scripts/verify-citations.js --all --concurrency 5 --cache --cache-ttl-days 7",
     "security:secrets": "node scripts/secret-scan.js",
     "export:public": "node scripts/export-public.js",
-    "release:check": "npm run preflight:all && npm run security:secrets && npm run export:public && npm run index:leadership && npm run dashboard && npm run trend-report",
+    "release:check": "npm run preflight:all && npm run security:secrets && npm run export:public && npm run index:summary && npm run dashboard && npm run trend-report",
     "validate:schemas": "node scripts/validate-schemas.js",
+    "index:summary": "node scripts/generate-leadership-index.js",
     "index:leadership": "node scripts/generate-leadership-index.js",
     "dashboard": "node scripts/generate-dashboard.js",
     "claims:check": "node scripts/claim-support-check.js --all",

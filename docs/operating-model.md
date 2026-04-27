@@ -5,11 +5,11 @@
 - Topic operator: starts or resumes research workflows and runs local preflight checks.
 - Technical reviewer: confirms the recommendation is actionable and evidence-backed.
 - Security reviewer: reviews security-sensitive topics and public export hygiene.
-- Publisher: approves public or leadership-facing output.
+- Publisher: approves public or stakeholder-facing output.
 
 ## Publication Gates
 
-A topic is leadership-ready only when:
+A topic is ready for delivery only when:
 
 - `overview.md`, `notes.md`, and `verdict.md` exist.
 - Required frontmatter is present.
@@ -29,9 +29,9 @@ Do not publish raw repository history when private topics, user requests, drafts
 ## Maintenance Cadence
 
 - Run `npm run preflight:all` before committing.
-- Run `npm run preflight:network` before leadership delivery when network access is available.
-- Run `npm run claims:check:strict` before leadership delivery to enforce direct, registry, nearby, or internal-analysis support for claim-like lines.
-- Run `npm run index:leadership`, `npm run dashboard`, and `npm run trend-report` before stakeholder review packets.
+- Run `npm run preflight:network` before delivery when network access is available. **Note: requires live internet access.**
+- Run `npm run claims:check:strict` before delivery to enforce direct, registry, nearby, or internal-analysis support for claim-like lines.
+- Run `npm run index:summary`, `npm run dashboard`, and `npm run trend-report` before stakeholder review packets.
 - Review stale topics monthly.
 - Re-run citation checks before external sharing.
 - Archive superseded topics rather than deleting them.

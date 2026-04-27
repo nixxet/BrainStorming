@@ -9,7 +9,7 @@ const repoRoot = path.resolve(__dirname, "..");
 const outRoot = path.join(repoRoot, "dist", "public");
 const topicsRoot = path.join(repoRoot, "topics");
 const publicTopicFiles = ["overview.md", "notes.md", "verdict.md"];
-const rootFiles = ["README.md", "CLAUDE.md", "index.md", "archived-topics.md", "diagram.md", "LICENSE", "package.json"];
+const rootFiles = ["README.md", "index.md", "archived-topics.md", "diagram.md", "LICENSE", "package.json"];
 
 function removeDirectorySafe(target) {
   const resolved = path.resolve(target);

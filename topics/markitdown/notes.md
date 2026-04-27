@@ -5,6 +5,8 @@ created: 2026-04-26
 status: complete
 ---
 
+> *Note: Citations labeled `(internal)` refer to pipeline analysis artifacts — benchmarks, synthesis documents, and stress tests — stored in `_pipeline/`, which is excluded from public mirrors by design.*
+
 # MarkItDown — Research Notes
 
 ## Key Findings
