@@ -7,31 +7,64 @@ const { spawnSync } = require("node:child_process");
 
 const repoRoot = path.resolve(__dirname, "..");
 const externalScanners = [
-  { command: "gitleaks", args: ["detect", "--source", ".", "--redact"] },
-  { command: "trufflehog", args: ["filesystem", ".", "--only-verified", "--no-update"] },
+  {
+    command: "gitleaks",
+    versionArgs: ["version"],
+    scanArgs: ["detect", "--source", ".", "--redact"],
+  },
+  {
+    command: "trufflehog",
+    versionArgs: ["--version"],
+    scanArgs: ["filesystem", ".", "--only-verified", "--no-update"],
+  },
 ];
+
+/**
+ * Probe whether a scanner binary is present and responds to its version flag.
+ * Returns { found: bool, functional: bool, version: string|null, error: string|null }.
+ */
+function probeScanner({ command, versionArgs }) {
+  const probe = spawnSync(command, versionArgs, { encoding: "utf8" });
+
+  if (probe.error?.code === "ENOENT") {
+    return { found: false, functional: false, version: null, error: "not installed" };
+  }
+
+  const combined = `${probe.stdout || ""}${probe.stderr || ""}`.trim();
+  const notFoundSignals = ["not recognized", "command not found", "is not recognized"];
+  if (notFoundSignals.some((s) => combined.toLowerCase().includes(s))) {
+    return { found: false, functional: false, version: null, error: "not installed (shell)" };
+  }
+
+  if (probe.status !== 0 && !combined) {
+    return { found: true, functional: false, version: null, error: `version probe exited ${probe.status} with no output` };
+  }
+
+  // Extract a version string from the first line of output
+  const versionLine = combined.split(/\r?\n/)[0].trim();
+  return { found: true, functional: true, version: versionLine || null, error: null };
+}
 
 function runExternalScanner() {
   for (const scanner of externalScanners) {
-    const result = spawnSync(scanner.command, scanner.args, {
+    const probe = probeScanner(scanner);
+
+    if (!probe.found) {
+      console.log(`  ${scanner.command}: not found — skipping`);
+      continue;
+    }
+
+    if (!probe.functional) {
+      console.warn(`  ${scanner.command}: found but not functional (${probe.error}) — skipping`);
+      continue;
+    }
+
+    console.log(`  ${scanner.command}: ready (${probe.version}) — running scan`);
+
+    const result = spawnSync(scanner.command, scanner.scanArgs, {
       cwd: repoRoot,
       encoding: "utf8",
     });
-
-    // Scanner binary not found — try next
-    if (result.error && result.error.code === "ENOENT") continue;
-
-    const combinedOutput = `${result.stdout || ""}\n${result.stderr || ""}`.toLowerCase();
-
-    // Shell "command not found" output — scanner not installed
-    if (
-      result.status !== 0 &&
-      (combinedOutput.includes("not recognized") ||
-        combinedOutput.includes("command not found") ||
-        combinedOutput.includes("not found"))
-    ) {
-      continue;
-    }
 
     // Clean exit — no findings
     if (result.status === 0) {
@@ -39,18 +72,17 @@ function runExternalScanner() {
       return true;
     }
 
-    // Non-zero exit with stdout output: scanner found something — report and halt
+    // Non-zero exit with stdout: scanner found something — report and halt
     if (result.stdout && result.stdout.trim()) {
       process.stdout.write(result.stdout);
       if (result.stderr) process.stderr.write(result.stderr);
       process.exit(result.status);
     }
 
-    // Non-zero exit with no stdout: likely a scanner configuration or runtime error.
-    // Log the warning and fall through to the next scanner or the regex fallback.
+    // Non-zero exit with no stdout: runtime or config error — warn and try next
     process.stderr.write(
-      `Warning: ${scanner.command} exited with status ${result.status} but produced no findings output. ` +
-        `This may be a scanner configuration error. Stderr: ${(result.stderr || "").trim() || "(empty)"}\n`
+      `Warning: ${scanner.command} exited ${result.status} with no findings output. ` +
+        `Stderr: ${(result.stderr || "").trim() || "(empty)"}\n`
     );
   }
   return false;
@@ -58,7 +90,10 @@ function runExternalScanner() {
 
 const secretPatterns = [
   { name: "AWS access key", pattern: /AKIA[0-9A-Z]{16}/ },
-  { name: "OpenAI-style key", pattern: /sk-[A-Za-z0-9_-]{20,}/ },
+  // Real sk- keys are base62 (no hyphens in the key body). URL slugs like
+  // "sk-as-security-governance-concerns-mount" are excluded by requiring
+  // 20+ alphanumeric-only chars after the optional provider prefix.
+  { name: "OpenAI-style key", pattern: /sk-(?:proj-|org-)?[A-Za-z0-9]{20,}/ },
   { name: "GitHub token", pattern: /gh[pousr]_[A-Za-z0-9_]{30,}/ },
   { name: "Slack token", pattern: /xox[baprs]-[A-Za-z0-9-]{20,}/ },
   { name: "private key block", pattern: /-----BEGIN (RSA |EC |OPENSSH |)?PRIVATE KEY-----/ },
@@ -101,7 +136,8 @@ function runFallbackScan() {
   console.log("Fallback secret scan completed without obvious secret patterns.");
 }
 
+console.log("Probing external scanners:");
 if (!runExternalScanner()) {
-  console.log("No external secret scanner found; using built-in fallback pattern scan.");
+  console.log("No external scanner available; using built-in fallback pattern scan.");
   runFallbackScan();
 }
