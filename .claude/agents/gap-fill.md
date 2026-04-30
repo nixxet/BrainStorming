@@ -91,3 +91,39 @@ Write your findings to `topics/{topic-slug}/_pipeline/gap-fill.md`.
 - Do not pad findings to make gaps appear filled — an honest "UNFILLED" is more valuable than thin evidence
 - Do not re-report findings already in the existing research briefs
 - Do not broaden scope beyond the specific gaps you were given
+
+---
+
+## Manifest Output Contract
+
+After saving `topics/{topic-slug}/_pipeline/gap-fill.md`, also save a compact routing manifest to:
+
+`topics/{topic-slug}/_pipeline/manifests/phase-1b-gap-fill.json`
+
+Create the `manifests/` directory if needed. Use this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "phase": "phase_1b_gap_fill",
+  "agent": "gap_fill",
+  "status": "COMPLETE",
+  "outputs": ["_pipeline/gap-fill.md"],
+  "key_finding": "One-sentence summary of the most important filled or still-open gap.",
+  "quality_signal": "PASS",
+  "source_count": 0,
+  "confidence_counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_ids": [],
+  "blocking_issues": [],
+  "followup_needed": [],
+  "token_count": 0
+}
+```
+
+Set `quality_signal` to `PASS`, `PARTIAL`, or `NEEDS_FOLLOWUP`. Keep the manifest compact: gap counts, filled/unfilled status, and any unresolved blockers only.

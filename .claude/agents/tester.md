@@ -349,3 +349,40 @@ Rules:
 ## Save Output
 
 After completing your stress test, save the full report to `topics/{topic-slug}/_pipeline/stress-test.md`.
+
+Also save a compact routing manifest to:
+
+`topics/{topic-slug}/_pipeline/manifests/phase-6-tester.json`
+
+Create the `manifests/` directory if needed. Use this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "phase": "phase_6_tester",
+  "agent": "tester",
+  "status": "COMPLETE",
+  "outputs": ["_pipeline/stress-test.md"],
+  "key_finding": "One-sentence stress-test verdict.",
+  "quality_signal": "CONDITIONAL",
+  "source_count": 0,
+  "confidence_counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_ids": [],
+  "blocking_issues": [],
+  "followup_needed": [],
+  "token_count": 0,
+  "verdict": "CONDITIONAL",
+  "required_changes": [],
+  "critical_failures": 0,
+  "high_severity_findings": 0,
+  "medium_severity_findings": 0
+}
+```
+
+Set `quality_signal` and `verdict` to `PASS`, `CONDITIONAL`, or `FAIL`. Put concise report-change summaries in `required_changes`; keep full scenario detail in `stress-test.md`.

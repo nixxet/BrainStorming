@@ -522,3 +522,39 @@ Save to `topics/{topic-slug}/_pipeline/verified-synthesis.md`:
 ```
 
 In addition to `verified-synthesis.md`, save `topics/{topic-slug}/_pipeline/evidence.json` using the schema above.
+
+---
+
+## Manifest Output Contract
+
+After saving `verified-synthesis.md` and `evidence.json`, also save a compact routing manifest to:
+
+`topics/{topic-slug}/_pipeline/manifests/phase-2-analyzer.json`
+
+Create the `manifests/` directory if needed. Use this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "phase": "phase_2_analyzer",
+  "agent": "analyzer",
+  "status": "COMPLETE",
+  "outputs": ["_pipeline/verified-synthesis.md", "_pipeline/evidence.json"],
+  "key_finding": "One-sentence synthesis result that should drive writing.",
+  "quality_signal": "PASS",
+  "source_count": 0,
+  "confidence_counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_ids": ["F1"],
+  "blocking_issues": [],
+  "followup_needed": [],
+  "token_count": 0
+}
+```
+
+Populate `confidence_counts` from the evidence ledger. Populate `must_survive_ids` from findings where `must_survive` is true. Use `blocking_issues` for critical unresolved gaps that should stop drafting; use `followup_needed` for non-blocking caveats. Do not duplicate the full synthesis.

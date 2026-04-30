@@ -2,4 +2,4 @@
 
 | Topic | Status | Verdict |
 |-------|--------|---------|
-| [MarkItDown](topics/markitdown/) | Complete 2026-04-26 | Recommendation: MarkItDown is a lightweight, fast text extractor for simple, trusted English-language documents in LLM preprocessing pipelines—with explicit constraints, mandatory security patching, a... |
+| [MarkItDown](topics/markitdown/) | Complete 2026-04-30 | Conditional: use for Office docs (DOCX/PPTX/XLSX, 65–85% success) with Docling/Marker fallback for PDFs; unsuitable as standalone for mixed-format LLM pipelines (heading hierarchy 0.000). HIGH confidence on limitations; MEDIUM on success rates. |

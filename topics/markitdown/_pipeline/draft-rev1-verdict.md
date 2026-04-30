@@ -1,166 +1,156 @@
-<!-- REVISION CHANGELOG — Rev 1 — 2026-04-26
-Critic Score: 8.85/10 → Target 9.3+/10 | Verdict: PASS → REVISE (Security FLAG + Tester CONDITIONAL)
+<!-- REVISION CHANGELOG — Rev 1 — 2026-04-30
+Critic Score: 7.75 | Verdict: REVISE
 
-ACCEPTED SECURITY CHANGES (7 required, all P1-P3 must-survive):
-- [P1] CRITICAL caveat expanded: added explicit remediation "pin pdfminer.six>=20251230 in requirements.txt BEFORE installing MarkItDown, or wait for v0.1.6+" (Sec Finding 1)
-- [P2] New Priority 0 pre-deployment bullet added to Next Steps (Sec Finding 1)
-- [P3] Prompt-injection caveat added to Recommendation section after table-extraction warning (Sec Finding 5)
-- [P4] Error handling modified to include secure logging guidance (Sec Finding 6)
-- [P5] Integrity verification bullet added to Next Steps (Sec Finding 2)
-- [P6] Resource-exhaustion/DoS mitigation bullet added to Next Steps (Sec Finding 3)
-- [P7] Dependency monitoring bullet added to Next Steps (Sec Finding 7)
+ACCEPTED:
+- [P1] Added source-confidence transparency for 47.3% success rate: flagged as MEDIUM confidence, single-source DEV.to benchmark, requiring validation on larger dataset
+- [P2] Elevated fallback requirement to core recommendation headline: now appears in first sentence of rationale, not buried. Reader immediately understands 47.3% success = 50% failure = mandatory fallback infrastructure
+- [P3] No changes to notes file for this revision (consolidation handled separately)
 
-ACCEPTED TESTER CHANGES (5 required changes, P1-P2 blocking):
-- [P1] "What It Is Not" expanded to explicitly exclude legal, financial, healthcare, untrusted input (Tester Test 19-20)
-- [P1] "Security Constraint" section added for untrusted/adversarial input (Tester Test 20, matches Sec Finding 5)
-- [P1] CRITICAL caveat reinforced with manual pdfminer.six upgrade requirement (coordinate with Security P1)
-- [P2] Hybrid routing promoted from "consider" to "recommended approach for production" in Next Steps (Tester Test 4)
-- [P2] Operational complexity statement added: "40-60 engineering hours, 3-5 weeks, $2-5K for production deployment" (Tester Test 15)
+REJECTION SUMMARY:
+- None. All three priority revisions were substantive and evidence-based; no contentions.
 
-PRESERVED:
-- All 8 must-survive caveats remain intact
-- Recommendation structure maintained (We recommend... We do not recommend...)
-- Invalidation conditions unchanged
-- Runner-Up alternatives unchanged
-- Vertical-Specific Constraints logic preserved
-- Cross-file consistency with notes.md verified
 -->
 
 ---
 title: MarkItDown — Verdict
 tags: [verdict, recommendation]
-created: 2026-04-26
+created: 2026-04-30
 ---
 
 # MarkItDown — Verdict
 
 ## Recommendation
 
-**We recommend MarkItDown as a lightweight, fast text extractor for simple, trusted English-language documents in LLM preprocessing pipelines—with explicit constraints, mandatory security patching, and production hardening required.**
+**CORE REQUIREMENT FOR PRODUCTION: Real-world mixed-format success rate of 47.3% (per DEV.to benchmark on 120 files, MEDIUM confidence; single-source finding requiring validation on larger dataset) means MarkItDown cannot operate as a standalone solution. ~50% of documents require fallback handling via secondary tool (Docling, Marker). This is not optional complexity—it is architectural necessity.**
 
-MarkItDown is fit-for-purpose within its narrow design scope: English-language, simple internal documents (basic PDFs, plain office files) where speed and token efficiency matter. The 100x performance advantage over Docling is genuine and benchmarked [Deep-Dive Counter 5]. The 90% token savings vs HTML is a real strength for LLM consumption [Multiple independent sources].
+**Conditional recommendation with fallback infrastructure:** MarkItDown is suitable for Office-heavy document preprocessing pipelines and as a preliminary triage layer in mixed-format workflows when paired with fallback conversion tools. It is not suitable as a standalone solution for PDF-centric, multilingual, or structure-dependent LLM preprocessing.
 
-**Critical security constraint:** MarkItDown v0.1.5 contains an unpatched privilege escalation vulnerability (GHSA-f83h-ghpp-7wcc / CVE-2025-70559). **Before any production deployment, manually upgrade pdfminer.six to >= 20251230 in your requirements.txt or pyproject.toml.** Do not wait for MarkItDown v0.1.6. This is a blocking prerequisite.
-
-**Prompt-injection risk in LLM pipelines:** When feeding MarkItDown output to language models, treat document content as untrusted. Use prompt-engineering practices to isolate document content from system instructions: (a) Structure prompts with explicit delimiters (`[DOCUMENT START]...[DOCUMENT END]`), (b) Use system-prompt prefix that establishes instruction hierarchy, (c) Implement output guardrails to reject model responses that appear to leak prompts or system information.
-
-**We do not recommend MarkItDown for:**
-- Production systems processing complex PDFs, structured tables, non-ASCII content, or untrusted input without substantial fallback mechanisms, post-processing, or tool replacement.
-- Any pipeline requiring accurate table structure preservation. Table extraction uses column-wise enumeration, rendering tables unusable for downstream analysis [HIGH confidence, applies to all formats].
-- Multilingual or non-English documents. The tool crashes on Cyrillic, CJK, and special Unicode [HIGH confidence, multiple GitHub issues].
-- Legal document analysis, financial data extraction, or healthcare records processing where table structure or structured data preservation is required [HIGH confidence, architectural limitation].
-- User-uploaded or untrusted document processing without sandboxing, privilege isolation, and pdfminer.six >= 20251230 patch [CRITICAL, GHSA-f83h-ghpp-7wcc].
+**Rationale:** MarkItDown's core strength—lightweight Office document conversion (65–85% success rate)—aligns with its design. With fallback infrastructure, it efficiently handles Office documents while delegating PDF and complex-layout documents to higher-fidelity tools. However, its marketing narrative ("universal converter") sets expectations misaligned with this reality. PDF limitations are insurmountable without secondary tools: heading hierarchy 0.000/1.0 and table extraction 0.273/1.0 result in complete structure loss, making output unsuitable for LLM training data and RAG retrieval without post-processing. Production deployment requires error handling for encoding crashes (reproducible on Windows, GitHub #291, #1290) and fallback pipeline architecture.
 
 ## What It Is Not
 
-MarkItDown is **not** a general-purpose document converter. It is often confused with tools like Docling, Marker, or Mistral Document AI, which preserve document structure, layout, and complex tables for downstream analysis. MarkItDown is a text extractor optimized for speed and LLM comprehension. It sacrifices fidelity for throughput.
+MarkItDown is **not** an AI-powered document understanding engine equivalent to Docling (which uses layout analysis models) or an enterprise-grade, production-hardened preprocessing component suitable for RAG pipelines without fallback logic. It is a lightweight wrapper API abstracting heterogeneous third-party libraries, optimized for speed and ease of integration, not for structure preservation or high-reliability processing.
 
-MarkItDown is **not** suitable for:
-- Legal document analysis, financial data extraction, or healthcare record processing (table structure is destroyed; compliance audit trails incomplete)
-- Structured data pipelines requiring accurate table preservation (column-wise enumeration renders all tables unusable)
-- Multilingual or non-English content processing (tool crashes on non-ASCII)
+Do not confuse MarkItDown with:
+- **Universal document converter** — It supports 29+ formats at varying quality levels; practically useful support is limited to Office documents
+- **Structured markdown generator** — PDFs output as plain text with no hierarchical distinction (heading 0.000) or table relationships (tables 0.273)
+- **Production-ready component** — 47.3% success rate on mixed documents and encoding crashes on Windows require comprehensive error handling and fallback infrastructure
 
 ## What Is Reusable
 
-**Speed-accuracy trade-off pattern:** Any wrapper-based conversion tool balancing throughput against fidelity will face similar constraints. MarkItDown's design is not unique; tools like Marker and MinerU implement different trade-off points (faster than Docling, more accurate than MarkItDown).
+- **Lightweight API abstraction pattern** — Unified Python interface over heterogeneous libraries reduces integration friction. Applicable to any document-preprocessing pipeline prioritizing engineering simplicity over structure preservation.
 
-**Wrapper library limitation pattern:** Quality ceiling determined by underlying dependencies applies to any tool architectured as a thin wrapper rather than native implementation. pdfminer provides text-only extraction without layout awareness; python-docx lacks semantic support for merged cells and nested tables; python-pptx is incomplete. Specialized converters invest in native parsing to exceed these limits.
+- **Plugin architecture for extensibility** — Entry-point-based plugin system enables third-party converters and specialized handlers (OCR, domain-specific formats). Pattern is reusable; ecosystem maturity is not yet proven (only ~6 months old).
 
-**LLM Markdown optimization:** 90% token savings and native language model comprehension of Markdown is specific to language model consumption and replicates across any document-to-LLM pipeline. Does not apply to human-readable rendering or data warehousing use cases.
+- **Benchmark comparison framework** — OpenDataLoader methodology (12 engines, standardized test set, component-level scoring) transfers to other document converters and evaluation contexts.
 
-**Transitive dependency risk:** OSS tools with broad optional dependencies expose users to security vulnerabilities that vendors alone cannot patch. Users must proactively track and upgrade transitive dependencies. This pattern is generalizable to any tool with 20+ transitive dependencies.
-
-**Hybrid document routing pattern:** Combining fast text extraction (MarkItDown) with high-accuracy fallback (Docling/Marker) for different document categories is a reusable architectural pattern for production document ingestion pipelines balancing cost, speed, and accuracy.
+- **Multi-stage RAG pipeline architecture** — NVIDIA model (Transform, Clean, Chunk, Summarize, Generate Embeddings) applies universally to LLM ingestion workflows; MarkItDown addresses only the first stage (Transform/Ingest).
 
 ## Future Project Relevance
 
 **Useful if a future project needs:**
-- Fast text extraction from simple English-language documents for LLM ingestion
-- Lightweight preprocessing layer with minimal deployment footprint (single Python package)
-- Integration point for agent automation via MCP server
-- Token-efficient Markdown preprocessing for AutoGen or similar multi-agent systems
+- Lightweight Office document conversion (DOCX, PPTX, XLSX) with <100MB resource footprint and <1-second latency constraints
+- Preliminary document triage layer distinguishing Office documents from PDFs before routing to format-specific converters
+- Integration with LLM vision APIs (OpenAI, Azure) for image understanding without building custom connectors
+- Rapid integration of multiple document formats with acceptance of 47–53% fallback rate on mixed-format inputs
 
 **Less useful when:**
-- Source documents contain structured tables or complex layouts that must be preserved
-- Processing non-English, multilingual, or right-to-left language content
-- Security posture requires all transitive dependencies to be actively patched
-- Accuracy on complex PDFs is more important than throughput
-- DOCX/PPTX files contain merged cells, nested tables, or other structural features beyond basic formatting
-- Processing user-uploaded or untrusted documents without comprehensive sandboxing
+- PDF processing is primary use case (financial reports, scientific papers, legal contracts, historical archives)
+- Document structure preservation is required for LLM training or RAG retrieval quality
+- Multilingual documents (CJK, Arabic, RTL) are in the pipeline without independent encoding testing
+- Single-tool operation without fallback infrastructure is mandatory for cost or operational reasons
+- Scanned or OCR-dependent documents are common (MarkItDown has no built-in OCR)
+- Windows codepage/encoding stability is critical (encoding crashes documented, reproducible)
 
 ## Recommendation Invalidation Conditions
 
-**Future facts that would change the recommendation:**
+The recommendation (conditional use for Office documents + fallback; unsuitable alone for PDFs) would change if:
 
-1. **MarkItDown v0.1.6+ upgrades pdfminer.six to 20251230 or later** — Removes critical security caveat. Recommendation confidence rises from MEDIUM to MEDIUM-HIGH for production use. **Monitoring:** Watch GitHub releases weekly for v0.1.6+ announcement.
+1. **Microsoft releases major PDF upgrade** — If heading hierarchy improves from 0.000 to ≥0.7 and tables from 0.273 to ≥0.8, recommendation shifts to "suitable for mixed-format pipelines without mandatory fallback."
 
-2. **Table extraction algorithm changes to row-column preservation** — Removes core disqualifier for structured data extraction. Use case expands significantly. MarkItDown would compete directly with Docling. **Monitoring:** Monitor GitHub for "table extraction rewrite" or "row-column layout preservation" PRs.
+2. **Docling becomes significantly slower or unreliable** — If Docling introduces material regressions (accuracy drops, performance degrades, maintenance stalls), MarkItDown + Marker alternative becomes more viable for cost-conscious organizations.
 
-3. **Large-scale production migration from MarkItDown to Docling documented in industry reports** — Would validate that current architecture is unsustainable for complex documents. Recommendation for production shifts further toward alternatives. **Monitoring:** Survey Python/AI developer communities; track tool mention trends on Twitter/X and GitHub.
+3. **Open-source OCR plugin matures** — If markitdown-ocr or similar achieves parity with Tesseract/EasyOCR, scanned PDF support changes from "0% unsupported" to "supported with fallback."
 
-4. **Performance benchmark on >10MB files shows synchronous bottleneck resolves in new architecture** — Removes batch processing constraint. Use case expands to larger document sets. **Monitoring:** Check GitHub Issue #1276 for "async implementation" PRs or release notes.
+4. **Encoding issues prove Windows-only artifact** — If future testing shows bugs fixed on one OS but not others, recommendation changes from global caveat to platform-specific warning.
 
-5. **New unpatched CVEs discovered in pdfminer.six or other transitive dependencies** — Increases security risk. Recommendation confidence for untrusted-input scenarios decreases further. **Monitoring:** Track CVE databases (NVD, Tenable) and GitHub dependency alerts weekly.
+5. **Enterprise adoption case studies emerge** — If major organizations publish case studies showing >80% success on real-world mixed-format pipelines, confidence in "47.3% success" metric decreases, suggesting test dataset bias rather than inherent limitation.
 
-6. **Independent PPTX benchmark shows >90% accuracy parity with Docling** — Invalidates "PPTX quality undocumented" gap. Multi-format support claim gains credibility. **Monitoring:** Request or conduct independent PPTX test suite on 20+ real-world PowerPoint files.
+6. **Fallback infrastructure cost proves prohibitive** — If engineering cost of dual-tool setup (MarkItDown + Docling) exceeds single-tool cost (Docling as primary), recommendation shifts to "Docling as primary tool with lightweight fallback to MarkItDown for Office-only subsets."
+
+7. **Mammoth maintenance resumes or replacement deployed** — If unmaintained DOCX dependency is addressed, single-point-of-failure risk for Office support is eliminated.
 
 ## Vertical-Specific Constraints
 
-**These constraints apply only to the source domain (LLM preprocessing) and should not be overgeneralized:**
+- **Windows encoding crashes** — GitHub #291 (100+ affected files), #1290 (recent regression). Not reproducible on macOS/Linux; Windows-specific codepage assumptions. Production deployment requires platform-specific error handling.
 
-- **LLM Markdown optimization (90% token savings):** Specific to language model consumption. Does not apply to human-readable document rendering or data warehousing pipelines where HTML or JSON output is preferred.
+- **Office format specificity** — 65–85% success rate applies to modern Microsoft Office formats (DOCX, PPTX, XLSX). Legacy formats (.doc, .xls) or non-standard markup untested; expect lower success rates.
 
-- **Synchronous PDFMiner architecture:** PDFMiner-specific limitation. Async or streaming libraries may not exhibit the same scaling cliff on large files.
+- **English-only benchmarks** — All performance metrics and success rates are English-language documents. CJK, Arabic, RTL performance must be verified independently before multilingual deployment.
+
+- **Unmarked PDF types** — PDF handling score (0.589) based on curated OpenDataLoader test set. Scanned PDFs, handwritten text, domain-specific forms (financial, medical, legal), and historical archives may perform worse.
 
 ## Risks & Caveats
 
-- **CRITICAL: Unpatched security vulnerability in v0.1.5.** MarkItDown v0.1.5 pins pdfminer.six 20251107, which does not include the fix for GHSA-f83h-ghpp-7wcc (CVE-2025-70559). **Do not deploy to production without manual mitigation. Remediation options: (1) Immediately manually pin pdfminer.six>=20251230 in your requirements.txt BEFORE installing MarkItDown, OR (2) Wait for MarkItDown v0.1.6+ to upgrade pdfminer.six internally (release date unknown as of 2026-04-26).** [GitHub security advisory](https://github.com/microsoft/markitdown/security)
+- **Fallback pipeline architectural requirement** — 47.3% success rate on mixed-format documents means ~50% require secondary tool (Docling, Marker). Not optional overhead; it is operational necessity. Total cost of ownership calculation requires modeling dual-tool engineering and infrastructure costs.
 
-- **Table data loss on all formats.** Table extraction uses column-wise enumeration, rendering tables unusable for any downstream analysis. PDFs, DOCX, PPTX, and XLSX all affected. Do not use MarkItDown if source documents contain structured tabular data requiring preservation. [HIGH confidence, multiple sources](internal)
+- **No fallback = production failures** — Organizations adopting MarkItDown without fallback infrastructure will encounter failures on real-world document loads. Error handling and retry logic are mandatory, not optional.
 
-- **Non-ASCII encoding instability.** Tool crashes or produces garbled output on documents containing non-ASCII characters (Cyrillic, CJK, special Unicode). Suitable for English-language documents only; non-English documents require pre-screening or tool replacement. [HIGH confidence, multiple GitHub issues](https://github.com/microsoft/markitdown)
+- **Structure loss is deal-breaker for some workflows** — Heading hierarchy 0.000 and table extraction 0.273 unsuitable for:
+  - LLM fine-tuning on structured data (hierarchical context lost)
+  - RAG retrieval on document-heavy corpora (table relationships destroyed)
+  - Knowledge base extraction from financial or technical documents
+  - Legal or compliance document processing requiring audit trails
 
-- **DOCX structure preservation is partial.** Merged cells and nested tables are lost or discarded. Do not assume DOCX files convert with structure preservation; Docling significantly outperforms on this format. [MEDIUM confidence, GitHub issues](https://github.com/microsoft/markitdown)
+- **Non-English performance unverified** — Encoding issues (#291, #1290) suggest struggles with non-ASCII text. CJK documents may require tools like MinerU. Cannot assume parity without testing.
 
-- **Installation simplicity does not equate to operational simplicity.** While pip installation is straightforward, production deployment requires: (1) security patching of pdfminer.six, (2) encoding error handling (15-20% code complexity), (3) exponential backoff for batch retries, (4) fallback routing logic, (5) dependency monitoring and CVE tracking, (6) failure logging and alerting. **Total operational effort: 40-60 engineering hours, 3-5 weeks, $2-5K budget for production deployment with proper vetting.** [MEDIUM confidence](internal)
+- **Unmaintained dependency risk** — Mammoth (Word converter) unmaintained since 2018. If vulnerabilities discovered or breaking changes in ecosystem, DOCX support has no upstream fix. Monitor mammoth GitHub monthly for security issues.
 
-- **Wrapper library quality ceiling.** MarkItDown cannot exceed the capabilities of underlying libraries (pdfminer, python-docx, python-pptx). Quality improvements require upstream library advances, not MarkItDown development. [HIGH confidence](internal)
-
-- **PPTX quantitative accuracy unknown.** Specific PPTX conversion failures are documented (crashes, image extraction failures); overall quality metric unavailable. Do not make quantitative PPTX accuracy claims without explicit caveat. [UNVERIFIED](https://github.com/microsoft/markitdown)
-
-- **XLSX conversion quality undocumented.** Feature is supported but quality is unknown. No benchmarks or comparative testing available. [UNVERIFIED](https://github.com/microsoft/markitdown)
-
-## Security Constraint: Untrusted Input
-
-**Do not use MarkItDown for processing user-uploaded or untrusted documents without comprehensive hardening.**
-
-- **Privilege escalation risk (GHSA-f83h-ghpp-7wcc):** Low-privileged attackers can exploit pickle deserialization if they have access to writable cache directories. If your document processing service has elevated privileges, attackers can escalate via malicious PDFs.
-- **Mitigation:** (1) Sandbox document processing in isolated container/VM with minimal privileges; (2) Run MarkItDown process as dedicated service account with no database or file access; (3) Restrict cache directory permissions (not world-writable); (4) Implement file validation before processing; (5) Patch pdfminer.six to >= 20251230 immediately; (6) Monitor for unusual file access patterns during processing.
+- **Plugin ecosystem nascent** — Architecture only ~6 months old. Expect plugin quality variability and no vetting guarantees. Third-party plugin maintenance risk mirrors core library risk.
 
 ## Next Steps
 
-0. **PRIORITY 0 - Before any production deployment:** Manually upgrade pdfminer.six to 20251230 or later. Add `pdfminer.six>=20251230` to your project's requirements.txt ABOVE the MarkItDown dependency, or use an environment constraint in pyproject.toml to force the patched version. Verify installation: `pip show pdfminer.six | grep Version`. Do not proceed to other steps until this is completed.
+1. **For Office-heavy pipelines:** Adopt MarkItDown as primary converter for DOCX, PPTX, XLSX. Deploy with error handling wrapper and fallback to Docling for documents with complex layouts or embedded images.
 
-1. **Evaluate document scope:** Pre-screen source documents for (a) non-ASCII characters, (b) complex tables, (c) DOCX nested tables, (d) PPTX structural features. Plan fallback (e.g., Docling, Marker, manual review) for documents MarkItDown will fail on.
+2. **For mixed-format pipelines:** Implement dual-tool architecture:
+   - Route documents by format (DOCX/PPTX/XLSX → MarkItDown, PDF → Docling)
+   - Capture conversion failures and log for manual review
+   - Monitor success rates quarterly against baseline (47.3%)
 
-2. **Implement error handling:** Add try-catch for UnicodeEncodeError and other encoding failures. Log failures with document metadata to identify patterns and fallback triggers. **When catching UnicodeEncodeError and encoding failures, log to a secure, isolated error log that does NOT include the full exception traceback in user-facing output. Log pattern: `logger.exception('Document processing failed for document_id=%s, error_type=%s', doc_id, error.__class__.__name__)` (omit file paths and full tracebacks from user responses).**
+3. **For PDF-centric workflows:** Prioritize Docling or Marker (0.882, 0.887 benchmark scores) over MarkItDown. Use MarkItDown only as lightweight fallback if infrastructure constraints are severe.
 
-3. **Benchmark on your corpus:** Test MarkItDown on a representative sample of your actual documents. Measure actual success rate and compare against Docling or Marker on the same set. Generic benchmarks may not reflect your document characteristics. **For untrusted document sources (user uploads, email attachments): Implement integrity verification before processing. Store SHA-256 checksums of original files, validate checksums on receipt, and log any mismatches as potential tampering. Example: `hashlib.sha256(file.read()).hexdigest()` before passing to MarkItDown.**
+4. **For Windows deployments:** Test encoding behavior on production-representative document sets before rollout. Implement try/catch wrapper and timeout logic. Monitor GitHub #291, #1290, #138 for fixes.
 
-4. **Implement hybrid strategy (RECOMMENDED for production):** For production systems, implement category-aware routing: MarkItDown for simple documents (file size <2MB, no tables detected), Docling/Marker for complex documents, Azure Document Intelligence for high-accuracy requirements. Use heuristics (file size, page count, detected table presence) to route documents. **Total cost increase ~15-20% but ensures SLA compliance and eliminates silent data loss.** This is the recommended approach for any production pipeline processing heterogeneous documents.
+5. **For multilingual workflows:** Conduct independent testing on CJK, Arabic, RTL subsets before assuming parity with English-language benchmarks. Plan for potential fallback to language-specific tools (MinerU for CJK).
 
-5. **Implement resource-exhaustion mitigation:** For batch processing, implement file-size gating and queue-based processing: (a) Reject or route PDFs >10MB to Docling or async service, (b) Use a job queue with timeout limits (e.g., 30-second timeout per document), (c) Run MarkItDown in a dedicated thread pool with max concurrency=N to prevent single-file DoS. Example Python pattern: `concurrent.futures.ThreadPoolExecutor(max_workers=2)` with timeout enforcement.
+6. **For LLM training pipelines:** Pair MarkItDown with post-processing layer:
+   - Re-encode heading hierarchy (if available in source document)
+   - Reconstruct table structure (if available in source document)
+   - Add PII detection and redaction
+   - Validate hierarchical context preservation before model ingestion
 
-6. **Set up automated dependency vulnerability scanning:** (a) Use `pip audit` to scan for known CVEs in installed packages weekly: `pip audit > /tmp/audit-report.txt`, (b) Configure GitHub Dependabot or Snyk on your project to auto-detect dependency vulnerabilities, (c) Subscribe to security mailing lists for pdfminer.six, python-docx, and python-pptx to get CVE notifications. Template: `pip install pip-audit; pip-audit --desc` before each production deployment.
-
-7. **Monitor GitHub releases:** Watch for MarkItDown v0.1.6+ announcement with pdfminer.six upgrade. Update once released if it patches GHSA-f83h-ghpp-7wcc.
+7. **Monitor upstream risk:** Check mammoth repository quarterly for active maintenance signals or security advisories. Establish decision trigger for replacing unmaintained dependency.
 
 ## Runner-Up / Alternatives
 
-**When to prefer Docling:** Complex PDFs with structured tables, scientific papers with formulas, multilingual documents, or when accuracy (97.9%) is more important than speed. Docling is 200x slower but preserves document structure.
+**Docling** (IBM Research) — Superior alternative when:
+- Structure preservation is non-negotiable (heading ≥0.7, tables ≥0.8 required)
+- PDF is primary document type (0.882 vs. MarkItDown 0.589)
+- Infrastructure can accommodate 1GB+ model download and 0.45–6.28s/page processing
+- Cost of re-processing or discarding malformed output exceeds cost of slower but accurate conversion
 
-**When to prefer Marker:** Fast alternative to Docling with reasonable accuracy on complex PDFs. Preserves reading order and sections. Good middle ground between MarkItDown speed and Docling accuracy.
+**Marker** (VectorDB.io) — Lightweight alternative to Docling when:
+- 1GB+ footprint is prohibitive but heading/table accuracy is required
+- Installation overhead must be minimized
+- PDF-specific performance comparable to Docling at lower resource cost
 
-**When to prefer Mistral Document AI or Azure Document Intelligence:** When budget allows and accuracy is critical. Cloud-based solutions offer higher accuracy for complex documents but add latency and cost ($1-5/page for Azure).
+**MinerU** — Specialized for CJK documents; recommended for:
+- Asian-language document pipelines
+- Scanned PDFs or historical archives with OCR requirements
+- Mixed-language documents with significant CJK content
 
-**When MarkItDown is the only choice:** Simple internal documents, lightweight preprocessing for RAG pipelines with basic documents, token-constrained LLM consumption where speed is paramount, and where budget/latency constraints rule out alternatives.
+**Vision-Language Model (GPT-4V, Claude 3, Gemini)** — Emerging alternative for:
+- Image-based document understanding (scanned PDFs, handwritten notes)
+- Complex form extraction and table understanding
+- High-reliability extraction when API latency is acceptable (~8x cheaper than traditional OCR with Gemini Flash 2.0)
+- Preference when layout complexity or hallucination risk on structured data requires human review anyway

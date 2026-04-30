@@ -17,11 +17,13 @@ You orchestrate the BrainStorming research pipeline: you classify topics, spawn 
 
 Before spawning any agent, read its `.claude/agents/{name}.md` file to get current instructions. Inject those instructions as the first section of the prompt, followed by `---`, followed by the task context fields listed below.
 
-| Agent | File | Model | MaxTurns | Phase | Output File(s) | |-------|------|-------|----------|-------|-----------------| | Researcher | `researcher.md` | sonnet | 15 | 1 | `_pipeline/landscape.md` | | Investigator | `investigator.md` | sonnet | 18 | 1 | `_pipeline/deep-dive.md` | | Analyzer | `analyzer.md` | sonnet | 15 | 2 | `_pipeline/verified-synthesis.md` | <!-- sonnet: highly prescriptive cross-reference matrix + contradiction decision tree added Apr 2026 compensate for capability gap; re-benchmark vs opus if quality drops below 8.0 critic threshold -->
-| Writer | `writer.md` | opus | 20 | 3 | `_pipeline/draft-overview.md`, `draft-notes.md`, `draft-verdict.md` | <!-- opus: creative synthesis required for prose transform from structured data; benchmark sonnet as cost-reduction candidate — run 3 identical topics and compare critic first-pass scores before switching -->
-| Critic | `critic.md` | sonnet | 15 | 4 | `_pipeline/scorecard.md` | | Security Reviewer | `security-reviewer.md` | sonnet | 12 | 5 | `_pipeline/security-review.md` | | Tester | `tester.md` | sonnet | 12 | 6 | `_pipeline/stress-test.md` | | Publisher | `publisher.md` | sonnet | 12 | 7 | `overview.md`, `notes.md`, `verdict.md`, updated `index.md` |
+| Agent | File | Model | MaxTurns | Phase | Output File(s) | Manifest | |-------|------|-------|----------|-------|-----------------|----------| | Researcher | `researcher.md` | sonnet | 15 | 1 | `_pipeline/landscape.md` | `_pipeline/manifests/phase-1-researcher.json` | | Investigator | `investigator.md` | sonnet | 18 | 1 | `_pipeline/deep-dive.md` | `_pipeline/manifests/phase-1-investigator.json` | | Analyzer | `analyzer.md` | sonnet | 15 | 2 | `_pipeline/verified-synthesis.md`, `_pipeline/evidence.json` | `_pipeline/manifests/phase-2-analyzer.json` | <!-- sonnet: highly prescriptive cross-reference matrix + contradiction decision tree added Apr 2026 compensate for capability gap; re-benchmark vs opus if quality drops below 8.0 critic threshold -->
+| Writer | `writer.md` | opus | 20 | 3 | `_pipeline/draft-overview.md`, `draft-notes.md`, `draft-verdict.md` | `_pipeline/manifests/phase-3-writer.json` | <!-- opus: creative synthesis required for prose transform from structured data; benchmark sonnet as cost-reduction candidate — run 3 identical topics and compare critic first-pass scores before switching -->
+| Critic | `critic.md` | sonnet | 15 | 4 | `_pipeline/scorecard.md` | `_pipeline/manifests/phase-4-critic.json` | | Security Reviewer | `security-reviewer.md` | sonnet | 12 | 5 | `_pipeline/security-review.md` | `_pipeline/manifests/phase-5-security.json` | | Tester | `tester.md` | sonnet | 12 | 6 | `_pipeline/stress-test.md` | `_pipeline/manifests/phase-6-tester.json` | | Challenger | `challenger.md` | sonnet | 15 | 6.5 | `_pipeline/challenge.md` | `_pipeline/manifests/phase-6-5-challenger.json` | | Publisher | `publisher.md` | sonnet | 12 | 7 | `overview.md`, `notes.md`, `verdict.md`, updated `index.md` | `_pipeline/manifests/phase-7-publisher.json`, `_pipeline/manifests/publication.json` |
 
 All file paths above are relative to `topics/{topic-slug}/`.
+
+Every phase writes a full artifact for audit quality and a compact manifest for Director routing. Full artifacts stay on disk; the Director uses manifests and state metrics whenever possible.
 
 ## Topic Slug Convention
 
@@ -128,6 +130,8 @@ Create this file at Phase 0. Update it after every phase completes or fails. Thi
 Before marking any phase N as `completed`, verify that all phases 0 through N-1 are either `completed` or `skipped`. The full phase sequence is: 0, 1, 1b, 2, 3, 4, 5, 6, **6.5**, 7, 8. Phase 7 (Publisher) cannot begin until Phase 6.5 is `completed` or `skipped`. If a predecessor phase is still `pending` or `in_progress` but its output files exist on disk, mark it `completed` (with a `"note": "state retroactively corrected"` field) before advancing. If output files are missing, stop and investigate — do not skip ahead.
 
 Also verify artifact/state consistency:
+- If a phase output file exists for a newly-run phase, the corresponding `_pipeline/manifests/*.json` file must also exist. If the manifest is missing, retry that agent once to write only the manifest before proceeding.
+- If a manifest references an output path, verify that referenced file exists before marking the phase complete.
 - If any `draft-revN-*` files exist, `state.json.phases.phase_4.revision_count` must be at least `N`.
 - If `security-review.md` exists with verdict `FLAG`, Phase 5 must not remain `pending` or `PASS-by-assumption`.
 - If post-security revised drafts exist, record that Phase 5 triggered a rewrite loop.
@@ -139,8 +143,8 @@ If the pipeline is interrupted (timeout, crash, user resumes later):
 
 1. Read `topics/{topic-slug}/_pipeline/state.json`
 2. Find the last phase with `status: "completed"` — that is your checkpoint
-3. Check whether the next phase's output files exist on disk (they may have been written before state was updated)
-4. If output files exist and are valid (non-empty, contain expected sections), mark that phase completed and advance
+3. Check whether the next phase's manifest and output files exist on disk (they may have been written before state was updated)
+4. If the manifest exists, references real output files, and reports `status: COMPLETE`, mark that phase completed and advance. If outputs exist but the manifest is missing, retry the responsible agent once to write only the manifest.
 5. Resume from the first phase that is `in_progress`, `failed`, or `pending`
 6. Re-read the user's original request from `state.json.user_request` — do NOT ask the user to repeat it
 7. Rebuild the TodoWrite checklist to reflect current state
@@ -284,6 +288,7 @@ Every agent has zero memory between calls. You must pass ALL required fields in 
 HANDOFF SUMMARY
 Status: [COMPLETE | FAILED | PARTIAL]
 Output: [file path(s) written]
+Manifest: [manifest path(s) written, or "missing"]
 Key finding: [one sentence — the single most important result]
 Quality: [score, PASS/FAIL, or N/A]
 Tokens: [N tokens (from your usage block at the end of your response)]
@@ -291,10 +296,32 @@ Tokens: [N tokens (from your usage block at the end of your response)]
 
 **Director rule — do not read full artifact files for routing decisions.** After an agent returns:
 - Extract the HANDOFF SUMMARY from the response text.
-- Record Status, Output path, Key finding, and Tokens in state.json under that agent's phase entry.
-- Use the HANDOFF SUMMARY to decide next steps (proceed / retry / escalate).
-- Only read an artifact file directly when you need to pass specific file content to the next agent's context prompt (e.g., passing `verified-synthesis.md` path to the Writer).
-- **Never read full research files (landscape.md, deep-dive.md, scorecard.md) into your own context** — pass file paths and let receiving agents read them. Your context window grows with every file you read; keep it flat.
+- Read the expected compact manifest from `topics/{topic-slug}/_pipeline/manifests/` and use it as the primary routing record.
+- Record manifest fields in state.json where applicable: `status`, `outputs`, `key_finding`, `quality_signal`, `token_count`, `source_count`, `confidence_counts`, `must_survive_ids`, `blocking_issues`, `followup_needed`, and phase-specific verdict/score fields.
+- Use HANDOFF SUMMARY only as fallback if the manifest is missing or invalid. If the full artifact exists but the manifest is missing, retry the same agent once with: "Your full artifact exists, but the required manifest is missing. Write only the manifest now."
+- Use manifest values to decide next steps (proceed / retry / escalate / revise / block) whenever they exist.
+- Only read an artifact file directly when a later agent needs exact file content or when a specific audit/repair rule cannot be resolved from state + manifests.
+- **Never read full research files (landscape.md, deep-dive.md, verified-synthesis.md, scorecard.md, stress-test.md, challenge.md) into your own context for routine routing** — pass file paths and let receiving agents read them. Your context window grows with every file you read; keep it flat.
+
+### Manifest Routing Map
+
+Expected manifests:
+
+| Phase | Manifest |
+| --- | --- |
+| Phase 1 Researcher | `topics/{topic-slug}/_pipeline/manifests/phase-1-researcher.json` |
+| Phase 1 Investigator | `topics/{topic-slug}/_pipeline/manifests/phase-1-investigator.json` |
+| Phase 1b Gap Fill | `topics/{topic-slug}/_pipeline/manifests/phase-1b-gap-fill.json` |
+| Phase 2 Analyzer | `topics/{topic-slug}/_pipeline/manifests/phase-2-analyzer.json` |
+| Phase 3 Writer | `topics/{topic-slug}/_pipeline/manifests/phase-3-writer.json` |
+| Phase 4 Critic | `topics/{topic-slug}/_pipeline/manifests/phase-4-critic.json` |
+| Phase 5 Security | `topics/{topic-slug}/_pipeline/manifests/phase-5-security.json` |
+| Phase 6 Tester | `topics/{topic-slug}/_pipeline/manifests/phase-6-tester.json` |
+| Phase 6.5 Challenger | `topics/{topic-slug}/_pipeline/manifests/phase-6-5-challenger.json` |
+| Phase 7 Publisher | `topics/{topic-slug}/_pipeline/manifests/phase-7-publisher.json` |
+| Publication | `topics/{topic-slug}/_pipeline/manifests/publication.json` |
+
+Manifest fields are compact routing signals, not a replacement for full artifacts. Full artifacts remain the source for deep review, revision instructions, and audit evidence.
 
 ---
 
@@ -627,6 +654,7 @@ Task — Gap-fill:
 **After Phase 1b completes**, compile a Director Notes summary for the Analyzer listing:
 - Which gaps were filled (and in which file)
 - Which gaps remain (single-source, paywalled, unfindable) — pre-flag these for LOW/UNVERIFIED confidence
+- Prefer `_pipeline/manifests/phase-1b-gap-fill.json` for this summary. Read `gap-fill.md` only if the manifest is missing or too thin to identify remaining gaps.
 
 Update `state.json` Phase 1b → `completed` (or `skipped` with reason).
 
@@ -644,6 +672,8 @@ Spawn Analyzer with the exact fields from the Analyzer context spec above.
 
 Also confirm `topics/{topic-slug}/_pipeline/evidence.json` exists and contains a machine-readable ledger of findings, confidence ratings, must-carry caveats, and basic run metrics.
 
+Confirm `topics/{topic-slug}/_pipeline/manifests/phase-2-analyzer.json` exists and references both outputs. Use its `confidence_counts`, `must_survive_ids`, `blocking_issues`, and `followup_needed` fields for routine routing and state updates.
+
 If output is missing or incomplete, see Error Recovery below.
 
 Update `state.json` Phase 2 → `completed`.
@@ -658,6 +688,7 @@ Spawn Writer with the exact fields from the Writer context spec above.
 - `draft-verdict.md` — must contain `## Recommendation` section
 - `draft-verdict.md` — must explain what the topic is not for, or why obvious alternatives were not chosen
 - Draft set must preserve must-carry caveats from `evidence.json`
+- `topics/{topic-slug}/_pipeline/manifests/phase-3-writer.json` exists and references the latest draft set
 
 Update `state.json` Phase 3 → `completed`.
 
@@ -665,11 +696,19 @@ Update `state.json` Phase 3 → `completed`.
 
 Spawn Critic with the exact fields from the Critic context spec above.
 
-**Process the verdict from `scorecard.md`:**
+**Process the verdict from `_pipeline/manifests/phase-4-critic.json`:**
 
 | Verdict | Score | Action | |---------|-------|--------| | **PASS** | ≥ 8.0 | Proceed to Phase 5 | | **REVISE** | 6.0–7.9 | Re-spawn Writer with Critic's revision list. Increment `revision_count` in state.json. | | **REWRITE** | < 6.0 | Return to Phase 2 — re-spawn Analyzer with Critic's structural concerns + original research. Then restart Phase 3→4. |
 
-**First-pass PASS policy:** If Critic returns PASS on revision cycle 0, treat it as exceptional. Confirm the scorecard explicitly states why first-pass PASS was justified. If the scorecard does not address first-pass PASS eligibility on a complex topic, downgrade pipeline action to REVISE and re-run the Writer.
+Read `scorecard.md` only when the Critic manifest is missing/invalid, when `required_changes` must be passed verbatim to Writer, or when first-pass PASS needs a specific audit. For routine routing, use:
+- `verdict`
+- `weighted_total`
+- `dimension_scores`
+- `required_changes`
+- `must_survive_missing`
+- `review_incorporation_score`
+
+**First-pass PASS policy:** If Critic returns PASS on revision cycle 0, treat it as exceptional. Prefer the Critic manifest's `blocking_issues`, `followup_needed`, and `required_changes` fields to determine whether first-pass PASS was justified. If the manifest does not establish first-pass PASS eligibility on a complex topic, read the relevant scorecard summary. If neither artifact addresses first-pass PASS eligibility, downgrade pipeline action to REVISE and re-run the Writer.
 
 **Revision loop limit:** Max 3 revision cycles (tracked in `state.json.phases.phase_4.revision_count`).
 - Each revision: re-spawn Writer with `**Revision Context**` field populated, then re-spawn Critic with `**Revision Cycle**` incremented.
@@ -720,7 +759,7 @@ Task 2 — Tester:
 
 Wait for BOTH to return before reading results or proceeding.
 
-**After both return — process Security Review verdict:**
+**After both return — process Security Review verdict from `_pipeline/manifests/phase-5-security.json`:**
 
 | Verdict | Action | |---------|--------| | **PASS** | Proceed using Tester verdict below | | **FLAG** | Re-spawn Writer with `**Security Revisions**` field containing the required changes. Then re-run Critic (Phase 4) on the revised drafts. Then re-run Phase 5+6 (both again if both required, or Security Reviewer only if Tester already PASS/CONDITIONAL). | | **BLOCK** | STOP the pipeline. Report to user: what the blocking issue is, what must change, ask how to proceed. Update state.json Phase 5 → `failed` with details. |
 
@@ -729,8 +768,9 @@ When Security verdict = `FLAG`:
 - Record `state.json.phases.phase_5.security_required_change_count`
 - Require the Writer to preserve all must-survive security caveats in the next draft set
 - Do not allow Publisher to finalize if any required security change remains unmet
+- Pass `required_changes` from the security manifest to Writer. Read `security-review.md` only if exact remediation text is missing from the manifest.
 
-**After both return — process Tester verdict:**
+**After both return — process Tester verdict from `_pipeline/manifests/phase-6-tester.json`:**
 
 **Verify output:** Confirm `stress-test.md` exists and contains:
 - `## Test Summary` with severity counts
@@ -750,6 +790,8 @@ If Tester includes a structured required-change block, record:
 
 in `state.json.phases.phase_6`.
 
+Prefer the Tester manifest fields `critical_failures`, `high_severity_findings`, `medium_severity_findings`, `required_changes`, and `verdict` for these updates. Read `stress-test.md` only if exact report-change text is missing or the manifest is invalid.
+
 For `CONDITIONAL`, require Publisher to verify all HIGH findings appear as explicit caveats.
 For `FAIL`, default to revision unless the user explicitly wants publication with severe caveats.
 
@@ -768,12 +810,13 @@ If skipped: set `phase_6_5.status = "skipped"` with skip reason. Proceed to Phas
 **Spawn prompt must include:**
 - Full contents of `.claude/agents/challenger.md`
 - Current date, topic slug, workflow
-- Contents of: latest draft-verdict.md, latest draft-notes.md, verified-synthesis.md, stress-test.md, security-review.md (include even if Phase 5 was skipped — note its absence)
+- Paths to: latest draft-verdict.md, latest draft-notes.md, verified-synthesis.md, stress-test.md, security-review.md (include even if Phase 5 was skipped — note its absence)
+- Relevant compact manifests if present: `phase-4-critic.json`, `phase-5-security.json`, `phase-6-tester.json`
 
 **Verify anti-gaming rule before accepting STANDS:**
-Read challenge.md "Searches Attempted" section. Count line items. If < 8: re-spawn Challenger with: "Minimum 8 searches required before STANDS can be declared. Your previous attempt used {N} searches. Re-run — do not repeat the same queries." Record re-spawn in `errors[]`.
+Read `_pipeline/manifests/phase-6-5-challenger.json` and check `search_count`. If verdict is STANDS and `search_count < 8`, re-spawn Challenger with: "Minimum 8 searches required before STANDS can be declared. Your previous attempt used {N} searches. Re-run — do not repeat the same queries." If the manifest is missing `search_count`, read challenge.md "Searches Attempted" section as fallback. Record re-spawn in `errors[]`.
 
-**Process the verdict from challenge.md:**
+**Process the verdict from `_pipeline/manifests/phase-6-5-challenger.json`:**
 
 | Verdict | Action | |---------|--------| | **STANDS** | Record in state.json. Proceed to Phase 7. | | **NOTED** | Record in state.json. Pass all NOTED items to Publisher as `noted_counter_evidence` context — Publisher incorporates them directly during Step 1a without triggering a Writer revision cycle. Proceed to Phase 7. | | **WEAKENED** | Check `phase_6_5.weakened_cycle_count`. **WEAKENED cycle cap: 3 cycles for standard mode, 5 for deep mode.** If under cap: Re-spawn Writer with challenge.md as additional context. Writer qualifies affected claims and adds/updates the Counterarguments section. Re-run Phase 4 (Critic) — counts as `revision_count + 1`. Re-run Phase 5 only if the Writer's revision adds new capability claims or changes the security surface. Re-run Phase 6 only if the revision changes assumptions the Tester based its PASS/CONDITIONAL on. Then re-run Phase 6.5 Challenger on the revised final recommendation. Increment `phase_6_5.weakened_cycle_count`. **If cap is reached:** treat all remaining WEAKENED findings the same as NOTED — pass to Publisher for direct incorporation. Record `"weakened_cap_hit": true` in state.json. Proceed to Phase 7. | | **SUSTAINED** | Return to Phase 2 — spawn Analyzer with challenge.md + original research briefs as input. Challenge findings are new evidence data, not override data. Increment: `challenges_triggered + 1`, `phase_6_5.cycle = 2`. Restart: Phase 3 → Phase 4 → Phase 5 (if security_review_required) → Phase 6 → Phase 6.5. **SUSTAINED cycle cap:** if the second Phase 6.5 run also returns SUSTAINED, proceed with WEAKENED treatment on the second round's counter-evidence. Set `challenges_unresolved: 1` in run_metrics. Include the open challenge in Phase 8 Delivery summary. |
 
@@ -793,22 +836,26 @@ Read challenge.md "Searches Attempted" section. Count line items. If < 8: re-spa
 
 ### Phase 7-8: Final Consistency Audit Before Delivery
 
-Before final delivery, run a consistency audit across:
+Before final delivery, run a consistency audit using manifests first:
 - `state.json`
-- `verified-synthesis.md`
 - `evidence.json`
-- `scorecard.md`
-- `security-review.md` if present
-- `stress-test.md`
+- `_pipeline/manifests/phase-2-analyzer.json`
+- `_pipeline/manifests/phase-4-critic.json`
+- `_pipeline/manifests/phase-5-security.json` if present
+- `_pipeline/manifests/phase-6-tester.json` if present
+- `_pipeline/manifests/phase-6-5-challenger.json` if present
+- `_pipeline/manifests/publication.json`
 - any `draft-revN-*` files
 - final published `overview.md`, `notes.md`, `verdict.md`
 
 Confirm:
 - revision counts in state match the highest `draft-revN-*` found on disk
-- recorded scores/verdicts match the latest scorecard
-- review verdicts in state match the review files
+- recorded scores/verdicts match the latest manifests
+- review verdicts in state match the review manifests
 - must-survive caveats from `evidence.json` exist in the final published set
 - required changes from Security Review and Stress Test are either satisfied or explicitly unresolved in `errors`
+
+Read full `scorecard.md`, `security-review.md`, `stress-test.md`, or `challenge.md` only when the relevant manifest is missing/invalid or a mismatch cannot be resolved from manifest fields.
 
 If any mismatch is found, repair `state.json` before marking the run complete. If the mismatch cannot be repaired confidently, add a concrete error entry and tell the user in delivery.
 
@@ -821,6 +868,8 @@ Spawn Publisher with the exact fields from the Publisher context spec above.
 - `topics/{topic-slug}/notes.md`
 - `topics/{topic-slug}/verdict.md`
 - `index.md` was updated (grep for the topic slug in index.md)
+- `topics/{topic-slug}/_pipeline/manifests/phase-7-publisher.json`
+- `topics/{topic-slug}/_pipeline/manifests/publication.json`
 
 If Publisher reports stale dates: return to Phase 3 to fix temporal framing before re-publishing.
 
@@ -829,10 +878,11 @@ Update `state.json` Phase 7 → `completed`.
 ### Phase 8: Delivery
 
 1. Confirm all three topic files and index.md update exist
-2. Read the `## Recommendation` section from `topics/{topic-slug}/verdict.md`
-3. Read the `## Confidence Distribution` from `verified-synthesis.md`
-4. Present to user using the **workflow-specific template** below
-5. Update `state.json` Phase 8 → `completed`
+2. Read `topics/{topic-slug}/_pipeline/manifests/publication.json`
+3. Use publication manifest fields for recommendation, confidence distribution, quality score, must-survive coverage, review verdicts, challenge verdict, and caveats
+4. Read the `## Recommendation` section from `verdict.md` only if `publication.json` is missing or its `recommendation` field is too thin for a useful user summary
+5. Present to user using the **workflow-specific template** below
+6. Update `state.json` Phase 8 → `completed`
 
 #### Delivery Template: `/research`
 ```
@@ -843,8 +893,8 @@ Update `state.json` Phase 7 → `completed`.
 **Key findings:** {3-5 bullets, with confidence levels}
 **Top recommendation:** {the verdict}
 **Reusable value:** {1-2 bullets on what generalizes beyond the source domain}
-**Overall confidence:** {from confidence distribution}
-**Quality score:** {from Critic's scorecard}
+**Overall confidence:** {from publication manifest confidence_distribution}
+**Quality score:** {from publication manifest; fallback to Critic manifest/scorecard}
 **Adversarial challenge:** {one of: STANDS — recommendation survived adversarial challenge ({N} searches, {N} counter-evidence items evaluated) | WEAKENED — {1 sentence describing which claims were qualified and how} | Skipped — {skip reason} | OPEN CHALLENGE: {1 sentence describing the unresolved SUSTAINED finding}}
 **Caveats:** {quality gate issues, security flags, test failures — or "None"}
 **Token usage:** {run_metrics.token_usage.total_subagent} subagent tokens (~${run_metrics.cost_estimate_usd.total_estimate} estimated). Full session: run `/cost` for Director + subagent total.
@@ -863,8 +913,8 @@ Update `state.json` Phase 7 → `completed`.
 - {Option B advantage} — {confidence}
 **Reusable value:** {what comparison lesson generalizes across domains}
 **Decision matrix:** See notes.md for full comparison
-**Overall confidence:** {from confidence distribution}
-**Quality score:** {from Critic's scorecard}
+**Overall confidence:** {from publication manifest confidence_distribution}
+**Quality score:** {from publication manifest; fallback to Critic manifest/scorecard}
 **Adversarial challenge:** {one of: STANDS — recommendation survived adversarial challenge ({N} searches, {N} counter-evidence items evaluated) | WEAKENED — {1 sentence describing which claims were qualified and how} | Skipped — {skip reason} | OPEN CHALLENGE: {1 sentence describing the unresolved SUSTAINED finding}}
 **Caveats:** {quality gate issues, security flags, test failures — or "None"}
 **Token usage:** {run_metrics.token_usage.total_subagent} subagent tokens (~${run_metrics.cost_estimate_usd.total_estimate} estimated). Full session: run `/cost`.
@@ -883,8 +933,8 @@ Update `state.json` Phase 7 → `completed`.
 - {Vendor claim → verified/partially/unverified} — {confidence}
 **Reusable value:** {what is useful outside the evaluated item's native domain}
 **Biggest risk:** {single most important risk}
-**Overall confidence:** {from confidence distribution}
-**Quality score:** {from Critic's scorecard}
+**Overall confidence:** {from publication manifest confidence_distribution}
+**Quality score:** {from publication manifest; fallback to Critic manifest/scorecard}
 **Adversarial challenge:** {one of: STANDS — recommendation survived adversarial challenge ({N} searches, {N} counter-evidence items evaluated) | WEAKENED — {1 sentence describing which claims were qualified and how} | Skipped — {skip reason} | OPEN CHALLENGE: {1 sentence describing the unresolved SUSTAINED finding}}
 **Caveats:** {quality gate issues, security flags, test failures — or "None"}
 **Token usage:** {run_metrics.token_usage.total_subagent} subagent tokens (~${run_metrics.cost_estimate_usd.total_estimate} estimated). Full session: run `/cost`.
@@ -902,8 +952,8 @@ Update `state.json` Phase 7 → `completed`.
 **Why not the others:** {1 sentence per rejected candidate}
 **Key constraint match:** {how recommendation fits stated constraints}
 **Reusable value:** {what patterns or lessons transfer to other contexts}
-**Overall confidence:** {from confidence distribution}
-**Quality score:** {from Critic's scorecard}
+**Overall confidence:** {from publication manifest confidence_distribution}
+**Quality score:** {from publication manifest; fallback to Critic manifest/scorecard}
 **Adversarial challenge:** {one of: STANDS — recommendation survived adversarial challenge ({N} searches, {N} counter-evidence items evaluated) | WEAKENED — {1 sentence describing which claims were qualified and how} | Skipped — {skip reason} | OPEN CHALLENGE: {1 sentence describing the unresolved SUSTAINED finding}}
 **Caveats:** {quality gate issues, security flags, test failures — or "None"}
 **Token usage:** {run_metrics.token_usage.total_subagent} subagent tokens (~${run_metrics.cost_estimate_usd.total_estimate} estimated). Full session: run `/cost`.
