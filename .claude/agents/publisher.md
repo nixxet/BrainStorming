@@ -375,3 +375,67 @@ Run this checklist after Step 7 (files saved) and before Step 8 (index update). 
 - Do not merge or split sections that the Writer created — preserve the document structure.
 - Do not add a Sources section to a file if the Writer intentionally omitted one (e.g., verdict.md may not have a separate Sources section if all citations are inline).
 - Do not change the order of findings in notes.md — the Writer ordered them by confidence level and category for a reason.
+
+---
+
+## Manifest Output Contract
+
+After saving final public files and updating `index.md`, save two compact manifests:
+
+1. Phase manifest:
+   `topics/{topic-slug}/_pipeline/manifests/phase-7-publisher.json`
+2. Publication manifest:
+   `topics/{topic-slug}/_pipeline/manifests/publication.json`
+
+Create the `manifests/` directory if needed.
+
+The phase manifest uses this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "phase": "phase_7_publisher",
+  "agent": "publisher",
+  "status": "COMPLETE",
+  "outputs": ["overview.md", "notes.md", "verdict.md"],
+  "key_finding": "One-sentence final publication result.",
+  "quality_signal": "PASS",
+  "source_count": 0,
+  "confidence_counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_ids": [],
+  "blocking_issues": [],
+  "followup_needed": [],
+  "token_count": 0
+}
+```
+
+The publication manifest drives Director delivery. Use this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "published_files": ["overview.md", "notes.md", "verdict.md"],
+  "quality_score": 0,
+  "recommendation": "ADOPT / CONDITIONAL / SKIP - one concise sentence",
+  "confidence_distribution": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_coverage": "PASS",
+  "security_verdict": "PASS",
+  "tester_verdict": "CONDITIONAL",
+  "challenge_verdict": "STANDS",
+  "open_caveats": []
+}
+```
+
+Populate `quality_score` from the Critic scorecard, `confidence_distribution` from `evidence.json` or the Analyzer manifest, and verdict fields from state/review artifacts. `must_survive_coverage` must be `PASS` only if all required caveats survived into final files.

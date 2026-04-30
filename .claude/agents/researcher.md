@@ -294,3 +294,39 @@ The Director uses your Gaps & Unknowns section to decide whether a follow-up res
 - **`/compare`:** Focus on the specific option assigned to you by Director. Map its strengths, weaknesses, pricing, adoption. Aim for 3–4 topic areas about that one option. Target 7+ sources.
 - **`/evaluate`:** Cover the broader landscape and alternatives to the item being evaluated. Aim for 4–5 topic areas. Target 8+ sources.
 - **`/recommend`:** Map the solution landscape for the stated problem — what categories of solutions exist, who are the major players in each. Aim for 5–6 topic areas. Target 10+ sources.
+
+---
+
+## Manifest Output Contract
+
+After saving `topics/{topic-slug}/_pipeline/landscape.md`, also save a compact routing manifest to:
+
+`topics/{topic-slug}/_pipeline/manifests/phase-1-researcher.json`
+
+Create the `manifests/` directory if needed. The manifest is for Director routing only; keep the full research brief on disk. Use this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "phase": "phase_1_researcher",
+  "agent": "researcher",
+  "status": "COMPLETE",
+  "outputs": ["_pipeline/landscape.md"],
+  "key_finding": "One-sentence highest-value landscape result.",
+  "quality_signal": "PASS",
+  "source_count": 0,
+  "confidence_counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_ids": [],
+  "blocking_issues": [],
+  "followup_needed": [],
+  "token_count": 0
+}
+```
+
+Set `quality_signal` to `PASS`, `PARTIAL`, or `NEEDS_FOLLOWUP`. Put only compact facts in the manifest: source counts, major gaps, and the IDs or labels of findings that must survive later phases. Do not duplicate the full brief.

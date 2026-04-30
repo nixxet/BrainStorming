@@ -209,6 +209,78 @@ test("schema validator accepts current topic state and evidence contracts", () =
   assert.match(result.stdout, /Schema validation passed/);
 });
 
+test("manifest validator requires manifests for existing phase outputs", () => {
+  const slug = "manifest-test";
+  const topicDir = path.join(repoRoot, "topics", slug);
+  const pipelineDir = path.join(topicDir, "_pipeline");
+  const manifestDir = path.join(pipelineDir, "manifests");
+
+  fs.rmSync(topicDir, { recursive: true, force: true });
+  fs.mkdirSync(pipelineDir, { recursive: true });
+
+  try {
+    fs.writeFileSync(path.join(topicDir, "overview.md"), "# Manifest Test\n", "utf8");
+    fs.writeFileSync(path.join(topicDir, "notes.md"), "# Notes\n", "utf8");
+    fs.writeFileSync(path.join(topicDir, "verdict.md"), "# Verdict\n", "utf8");
+    fs.writeFileSync(path.join(pipelineDir, "scorecard.md"), "<weighted_total>8.5</weighted_total>\n<verdict>PASS</verdict>\n", "utf8");
+
+    const missing = run(["scripts/validate-manifests.js", "--topic", slug, "--json"]);
+    assert.equal(missing.status, 1);
+    assert.match(missing.stdout, /phase-4-critic\.json/);
+
+    fs.mkdirSync(manifestDir, { recursive: true });
+    fs.writeFileSync(path.join(manifestDir, "phase-4-critic.json"), `${JSON.stringify({
+      schema_version: "1",
+      topic_slug: slug,
+      phase: "phase_4_critic",
+      agent: "critic",
+      status: "COMPLETE",
+      outputs: ["_pipeline/scorecard.md"],
+      key_finding: "Drafts pass the quality gate.",
+      quality_signal: "PASS",
+      weighted_total: 8.5,
+      verdict: "PASS",
+    }, null, 2)}\n`, "utf8");
+    fs.writeFileSync(path.join(manifestDir, "phase-7-publisher.json"), `${JSON.stringify({
+      schema_version: "1",
+      topic_slug: slug,
+      phase: "phase_7_publisher",
+      agent: "publisher",
+      status: "COMPLETE",
+      outputs: ["overview.md", "notes.md", "verdict.md"],
+      key_finding: "Published public topic files.",
+      quality_signal: "PASS",
+    }, null, 2)}\n`, "utf8");
+    fs.writeFileSync(path.join(manifestDir, "publication.json"), `${JSON.stringify({
+      schema_version: "1",
+      topic_slug: slug,
+      published_files: ["overview.md", "notes.md", "verdict.md"],
+      quality_score: 8.5,
+      recommendation: "ADOPT",
+      confidence_distribution: { HIGH: 1, MEDIUM: 0, LOW: 0, UNVERIFIED: 0 },
+      must_survive_coverage: "PASS",
+    }, null, 2)}\n`, "utf8");
+
+    const passing = run(["scripts/validate-manifests.js", "--topic", slug, "--json"]);
+    assert.equal(passing.status, 0, passing.stderr);
+    const payload = JSON.parse(passing.stdout);
+    assert.equal(payload.failed, 0);
+  } finally {
+    fs.rmSync(topicDir, { recursive: true, force: true });
+  }
+});
+
+test("context impact report emits topic metrics as JSON", () => {
+  const result = run(["scripts/context-impact-report.js", "--topic", "markitdown", "--json"]);
+  assert.equal(result.status, 0, result.stderr);
+
+  const payload = JSON.parse(result.stdout);
+  assert.equal(payload.total, 1);
+  assert.equal(payload.rows[0].slug, "markitdown");
+  assert.ok(payload.rows[0].pipeline_markdown_bytes > 0);
+  assert.ok(payload.rows[0].avoided_context_bytes > 0);
+});
+
 test("public export excludes private pipeline and meta artifacts", () => {
   const result = run(["scripts/export-public.js"]);
   assert.equal(result.status, 0, result.stderr);

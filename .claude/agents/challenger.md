@@ -96,3 +96,43 @@ Use these tiers when citing counter-evidence:
 | Tier | Description | |------|-------------| | T1 | Primary source: official documentation, official changelogs, vendor announcements, regulatory text | | T2 | High-credibility secondary: peer-reviewed research, independent audits, established technical publications | | T3 | Community/practitioner: Stack Overflow, GitHub issues, HN discussions, practitioner blogs | | T4 | Anecdotal: social media, unverified claims, single-user reports |
 
 Counter-evidence at T3 or T4 alone is insufficient for SUSTAINED. SUSTAINED requires at least one T1 or T2 source.
+
+---
+
+## Manifest Output Contract
+
+After saving `topics/{topic-slug}/_pipeline/challenge.md`, also save a compact routing manifest to:
+
+`topics/{topic-slug}/_pipeline/manifests/phase-6-5-challenger.json`
+
+Create the `manifests/` directory if needed. Use this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "phase": "phase_6_5_challenger",
+  "agent": "challenger",
+  "status": "COMPLETE",
+  "outputs": ["_pipeline/challenge.md"],
+  "key_finding": "One-sentence adversarial challenge result.",
+  "quality_signal": "STANDS",
+  "source_count": 0,
+  "confidence_counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_ids": [],
+  "blocking_issues": [],
+  "followup_needed": [],
+  "token_count": 0,
+  "verdict": "STANDS",
+  "counter_evidence_count": 0,
+  "noted_count": 0,
+  "search_count": 8
+}
+```
+
+Set `quality_signal` and `verdict` to `STANDS`, `NOTED`, `WEAKENED`, or `SUSTAINED`. Put concise counter-evidence summaries in `followup_needed`; put recommendation-changing issues in `blocking_issues`.

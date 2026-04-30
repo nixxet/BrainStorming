@@ -86,6 +86,8 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 | `npm run dashboard` | Generate a local static dashboard under `dist/dashboard/` |
 | `npm run validate-pipeline-state` | Validate topic pipeline metadata when present |
 | `npm run validate:schemas` | Validate pipeline state and evidence files against repository schemas |
+| `npm run validate:manifests` | Validate compact phase/publication manifests when phase artifacts exist |
+| `npm run context-impact` | Report topic artifact sizes and context-avoidance metrics |
 | `npm run validate-pipeline-state:repair` | Apply safe derived repairs to topic pipeline metadata |
 | `npm run bench-report` | Generate a quality benchmark report |
 | `npm run trend-report` | Generate an operations trend report from benchmark and citation data |

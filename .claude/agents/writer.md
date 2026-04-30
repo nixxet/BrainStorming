@@ -384,3 +384,43 @@ REJECTED:
 
 ### Step 5: Save revised drafts
 Save to `topics/{topic-slug}/_pipeline/draft-revN-overview.md`, `draft-revN-notes.md`, `draft-revN-verdict.md` where N is the revision number (1, 2, 3). Maximum 3 revision cycles — if still REVISE after rev3, escalate to the Director.
+
+---
+
+## Manifest Output Contract
+
+After saving initial drafts or revised drafts, also save/update a compact routing manifest to:
+
+`topics/{topic-slug}/_pipeline/manifests/phase-3-writer.json`
+
+Create the `manifests/` directory if needed. For revision cycles, list the latest revision files in `outputs`. Use this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "phase": "phase_3_writer",
+  "agent": "writer",
+  "status": "COMPLETE",
+  "outputs": [
+    "_pipeline/draft-overview.md",
+    "_pipeline/draft-notes.md",
+    "_pipeline/draft-verdict.md"
+  ],
+  "key_finding": "One-sentence draft recommendation direction.",
+  "quality_signal": "READY_FOR_CRITIC",
+  "source_count": 0,
+  "confidence_counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_ids": ["F1"],
+  "blocking_issues": [],
+  "followup_needed": [],
+  "token_count": 0
+}
+```
+
+Populate `confidence_counts` and `must_survive_ids` from `evidence.json`. Use `blocking_issues` only for draft defects that should stop Critic review. Keep the manifest compact; the full prose remains in the draft files.

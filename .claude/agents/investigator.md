@@ -277,3 +277,39 @@ The Director uses your gap report to decide whether a follow-up research pass is
 - **`/compare`:** Focus on the specific option assigned to you by Director. Find its weaknesses, hidden costs, and what competitors say about it. Verify vendor claims against independent sources.
 - **`/evaluate`:** Deep-dive the specific item being evaluated — vendor claims vs reality, user complaints, migration stories. Trace every marketing claim to its original source.
 - **`/recommend`:** Deep-dive the top 3-5 candidates identified in the problem space — find the differences that matter, the failure cases for each, and the costs nobody mentions.
+
+---
+
+## Manifest Output Contract
+
+After saving `topics/{topic-slug}/_pipeline/deep-dive.md`, also save a compact routing manifest to:
+
+`topics/{topic-slug}/_pipeline/manifests/phase-1-investigator.json`
+
+Create the `manifests/` directory if needed. The manifest is for Director routing only; keep the full deep-dive on disk. Use this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "phase": "phase_1_investigator",
+  "agent": "investigator",
+  "status": "COMPLETE",
+  "outputs": ["_pipeline/deep-dive.md"],
+  "key_finding": "One-sentence highest-value adversarial result.",
+  "quality_signal": "PASS",
+  "source_count": 0,
+  "confidence_counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_ids": [],
+  "blocking_issues": [],
+  "followup_needed": [],
+  "token_count": 0
+}
+```
+
+Set `quality_signal` to `PASS`, `PARTIAL`, or `NEEDS_FOLLOWUP`. Put only compact facts in the manifest: source counts, high-impact counterarguments, failed verification chains, and follow-up gaps. Do not duplicate the full brief.

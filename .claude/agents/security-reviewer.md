@@ -345,3 +345,37 @@ Do NOT recommend full assessment for:
 ## Save Output
 
 After completing your security review, save the full report to `topics/{topic-slug}/_pipeline/security-review.md`.
+
+Also save a compact routing manifest to:
+
+`topics/{topic-slug}/_pipeline/manifests/phase-5-security.json`
+
+Create the `manifests/` directory if needed. Use this JSON shape:
+
+```json
+{
+  "schema_version": "1",
+  "topic_slug": "{topic-slug}",
+  "phase": "phase_5_security",
+  "agent": "security_reviewer",
+  "status": "COMPLETE",
+  "outputs": ["_pipeline/security-review.md"],
+  "key_finding": "One-sentence security verdict.",
+  "quality_signal": "PASS",
+  "source_count": 0,
+  "confidence_counts": {
+    "HIGH": 0,
+    "MEDIUM": 0,
+    "LOW": 0,
+    "UNVERIFIED": 0
+  },
+  "must_survive_ids": [],
+  "blocking_issues": [],
+  "followup_needed": [],
+  "token_count": 0,
+  "verdict": "PASS",
+  "required_changes": []
+}
+```
+
+Set `quality_signal` and `verdict` to `PASS`, `FLAG`, or `BLOCK`. Put blocking security issues in `blocking_issues`; put concise required report changes in `required_changes`. Keep exact remediation detail in `security-review.md`.
