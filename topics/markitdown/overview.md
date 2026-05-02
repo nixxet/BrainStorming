@@ -34,7 +34,7 @@ LLM preprocessing pipelines use MarkItDown as an initial document ingestion laye
 
 ## Key Numbers / Stats
 
-- **87,000 GitHub stars** (by April 2026, 25,000 in first two weeks of launch) — HIGH confidence. [MarkItDown GitHub](https://github.com/microsoft/markitdown), [Yage.ai survey](https://yage.ai/share/markitdown-survey-en-20260412.html)
+- **~119,300 GitHub stars** (live check 2026-05-02; previously 87,000 by April 2026, 25,000 in first two weeks of launch) — HIGH confidence. [MarkItDown GitHub](https://github.com/microsoft/markitdown), [Yage.ai survey](https://yage.ai/share/markitdown-survey-en-20260412.html)
 - **0.589 / 1.0 overall score** on OpenDataLoader benchmark (12 PDF-to-Markdown engines, standardized test set) versus Docling's 0.882 — HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
 - **0.000 / 1.0 heading hierarchy preservation** on PDFs (all text flattened to single level, no structural distinction) — HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
 - **0.273 / 1.0 table fidelity** on PDFs (cells extracted as sequential text, row-column relationships destroyed) — HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)

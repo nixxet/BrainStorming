@@ -15,7 +15,7 @@ status: complete
 
 MarkItDown is fit-for-purpose within its narrow design scope: English-language, simple internal documents (basic PDFs, plain office files) where speed and token efficiency matter. The 100x performance advantage over Docling is genuine and benchmarked [Deep-Dive Counter 5]. The 90% token savings vs HTML is a real strength for LLM consumption [Multiple independent sources].
 
-**Critical security constraint:** MarkItDown v0.1.5 contains an unpatched privilege escalation vulnerability (GHSA-f83h-ghpp-7wcc / CVE-2025-70559). **Before any production deployment, manually upgrade pdfminer.six to >= 20251230 in your requirements.txt or pyproject.toml.** Do not wait for MarkItDown v0.1.6. This is a blocking prerequisite.
+**Security constraint:** Earlier analysis overstated the current v0.1.5 risk. A live source check on 2026-05-02 found MarkItDown v0.1.5 already declares `pdfminer.six>=20251230` and `mammoth~=1.11.0`. **Before any production deployment, verify the resolved environment actually installs `pdfminer.six>=20251230` and `mammoth>=1.11.0`, then run vulnerability scanning and sandbox untrusted document processing.** Dependency verification remains a blocking prerequisite.
 
 **Prompt-injection risk in LLM pipelines:** When feeding MarkItDown output to language models, treat document content as untrusted. Use prompt-engineering practices to isolate document content from system instructions: (a) Structure prompts with explicit delimiters (`[DOCUMENT START]...[DOCUMENT END]`), (b) Use system-prompt prefix that establishes instruction hierarchy, (c) Implement output guardrails to reject model responses that appear to leak prompts or system information.
 
@@ -67,7 +67,7 @@ MarkItDown is **not** suitable for:
 
 **Future facts that would change the recommendation:**
 
-1. **MarkItDown v0.1.6+ upgrades pdfminer.six to 20251230 or later** — Removes critical security caveat. Recommendation confidence rises from MEDIUM to MEDIUM-HIGH for production use. **Monitoring:** Watch GitHub releases weekly for v0.1.6+ announcement.
+1. **Resolved dependency verification becomes routine** — If downstream installs consistently resolve `pdfminer.six>=20251230` and `mammoth>=1.11.0` without overrides or stale lockfiles, the security caveat drops from blocking to standard vulnerability-scanning hygiene. **Monitoring:** Check GitHub releases and package metadata monthly.
 
 2. **Table extraction algorithm changes to row-column preservation** — Removes core disqualifier for structured data extraction. Use case expands significantly. MarkItDown would compete directly with Docling. **Monitoring:** Monitor GitHub for "table extraction rewrite" or "row-column layout preservation" PRs.
 
@@ -89,7 +89,7 @@ MarkItDown is **not** suitable for:
 
 ## Risks & Caveats
 
-- **CRITICAL: Unpatched security vulnerability in v0.1.5.** MarkItDown v0.1.5 pins pdfminer.six 20251107, which does not include the fix for GHSA-f83h-ghpp-7wcc (CVE-2025-70559). **Do not deploy to production without manual mitigation. Remediation options: (1) Immediately manually pin pdfminer.six>=20251230 in your requirements.txt BEFORE installing MarkItDown, OR (2) Wait for MarkItDown v0.1.6+ to upgrade pdfminer.six internally (release date unknown as of 2026-04-26).** [GitHub security advisory](https://github.com/microsoft/markitdown/security)
+- **Dependency security must be verified.** Earlier analysis claimed MarkItDown v0.1.5 pinned pdfminer.six 20251107; live source checks on 2026-05-02 found v0.1.5 declares `pdfminer.six>=20251230`. **Do not deploy to production until your lockfile/runtime confirms `pdfminer.six>=20251230` and `mammoth>=1.11.0`.** [GitHub security advisory](https://github.com/microsoft/markitdown/security)
 
 - **Table data loss on all formats.** Table extraction uses column-wise enumeration, rendering tables unusable for any downstream analysis. PDFs, DOCX, PPTX, and XLSX all affected. Do not use MarkItDown if source documents contain structured tabular data requiring preservation. [HIGH confidence, multiple sources](internal)
 
@@ -110,11 +110,11 @@ MarkItDown is **not** suitable for:
 **Do not use MarkItDown for processing user-uploaded or untrusted documents without comprehensive hardening.**
 
 - **Privilege escalation risk (GHSA-f83h-ghpp-7wcc):** Low-privileged attackers can exploit pickle deserialization if they have access to writable cache directories. If your document processing service has elevated privileges, attackers can escalate via malicious PDFs.
-- **Mitigation:** (1) Run MarkItDown in sandboxed container with dedicated service account (minimal privileges, no direct database access); (2) Restrict cache directory permissions (not world-writable); (3) Implement file validation before processing; (4) Patch pdfminer.six to >= 20251230 immediately; (5) Monitor for unusual file access patterns during processing.
+- **Mitigation:** (1) Run MarkItDown in sandboxed container with dedicated service account (minimal privileges, no direct database access); (2) Restrict cache directory permissions (not world-writable); (3) Implement file validation before processing; (4) Verify `pdfminer.six>=20251230` and `mammoth>=1.11.0` in the runtime; (5) Monitor for unusual file access patterns during processing.
 
 ## Next Steps
 
-0. **PRIORITY 0 - Before any production deployment:** Manually upgrade pdfminer.six to 20251230 or later. Add `pdfminer.six>=20251230` to your project's requirements.txt ABOVE the MarkItDown dependency, or use an environment constraint in pyproject.toml to force the patched version. Verify installation: `pip show pdfminer.six | grep Version`. Do not proceed to other steps until this is completed.
+0. **PRIORITY 0 - Before any production deployment:** Verify patched dependency resolution. Confirm `pdfminer.six>=20251230` and `mammoth>=1.11.0` in the environment with `pip show pdfminer.six mammoth` or your lockfile. Do not proceed to other steps until this is completed.
 
 1. **Evaluate document scope:** Pre-screen source documents for (a) non-ASCII characters, (b) complex tables, (c) DOCX nested tables, (d) PPTX structural features. Plan fallback (e.g., Docling, Marker, manual review) for documents MarkItDown will fail on.
 
@@ -128,7 +128,7 @@ MarkItDown is **not** suitable for:
 
 6. **Set up automated dependency vulnerability scanning:** (a) Use `pip audit` to scan for known CVEs in installed packages weekly: `pip audit > /tmp/audit-report.txt`, (b) Configure GitHub Dependabot or Snyk on your project to auto-detect dependency vulnerabilities, (c) Subscribe to security mailing lists for pdfminer.six, python-docx, and python-pptx to get CVE notifications. Template: `pip install pip-audit; pip-audit --desc` before each production deployment.
 
-7. **Monitor GitHub releases:** Watch for MarkItDown v0.1.6+ announcement with pdfminer.six upgrade. Update once released if it patches GHSA-f83h-ghpp-7wcc.
+7. **Monitor GitHub releases and dependency metadata:** Watch future MarkItDown releases for dependency floor changes, and re-check `pyproject.toml` or package metadata whenever upgrading. Keep `pdfminer.six` and `mammoth` vulnerability advisories in dependency-alert monitoring.
 
 ## Runner-Up / Alternatives
 
@@ -155,4 +155,4 @@ Scored 9.02/10 against the R&R quality rubric (8-dimension, 8.0 = PASS).
 | Risk Awareness | 10/10 | 5% |
 | Conciseness | 8/10 | 5% |
 
-**Verdict:** PASS | **Pipeline Artifacts:** `topics/markitdown/_pipeline/`
+**Verdict:** PASS | **Pipeline Artifacts:** `topics/markitdown-v1/_pipeline/`

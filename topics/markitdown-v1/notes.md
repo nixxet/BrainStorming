@@ -19,7 +19,7 @@ status: complete
 - **[HIGH]** Comprehensive format support (15+) — PDF, DOCX, PPTX, XLSX, images with EXIF/OCR, audio with transcription, HTML, YouTube, CSV, JSON, XML, EPubs, ZIP, and Azure Document Intelligence. [GitHub](https://github.com/microsoft/markitdown) — MIT license removes commercial friction.
   - **Transferability:** Multi-format wrapper architecture is reusable pattern.
 
-- **[HIGH]** Strong adoption and active maintenance — 91,000 GitHub stars, 5,400 forks, 74 contributors in ~6 months. MIT license, regular release cycles, integration with AutoGen and Azure signaling strategic positioning. [GitHub](https://github.com/microsoft/markitdown), [InfoWorld review](internal) — Unlikely to deprecate.
+- **[HIGH]** Strong adoption and active maintenance — ~119,300 GitHub stars and ~7,900 forks by live GitHub API check on 2026-05-02. MIT license, regular release cycles, integration with AutoGen and Azure signaling strategic positioning. [GitHub](https://github.com/microsoft/markitdown), [InfoWorld review](internal) — Unlikely to deprecate.
 
 - **[MEDIUM]** MCP server integration enables agent automation — markitdown-mcp exposes document conversion as tool for Claude Desktop and MCP-compatible agents. Multiple community implementations available (trsdn, KorigamiK). Deployable via Docker. [MCP Registry](https://modelcontextprotocol.io/)
   - **Recommendation role:** Supporting—expands use case to agent-based pipelines.
@@ -75,15 +75,14 @@ status: complete
 
 ### Security Considerations
 
-- **[CRITICAL]** MarkItDown v0.1.5 is vulnerable to GHSA-f83h-ghpp-7wcc (CVE-2025-70559) — Insecure pickle deserialization in pdfminer.six CMap loader allows local privilege escalation. Attack vector: Low-privileged user places malicious pickle file in writable CMap cache directory; trusted process loads it with elevated privileges. [GitHub security advisory](https://github.com/microsoft/markitdown/security), [CVE-2025-70559](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-70559)
-  - **Current state:** MarkItDown v0.1.5 pins pdfminer.six **20251107**, which introduced the vulnerability GHSA-f83h-ghpp-7wcc while attempting to fix CVE-2025-64512. MarkItDown v0.1.5 is **critically vulnerable** and requires immediate manual remediation.
-  - **Patch requirement:** pdfminer.six **20251230 or later** required to remediate (replaces pickle with JSON). **Mandatory action: Pin pdfminer.six >= 20251230 in your requirements.txt BEFORE installing MarkItDown, or use environment constraint in pyproject.toml. This must be done manually as MarkItDown v0.1.5 does not include the fix.**
-  - **Availability:** pdfminer.six 20260107 (January 2026) is current; MarkItDown does not pin it.
-  - **Risk scope:** Applies to systems processing untrusted PDF input OR systems where unprivileged users have access to writable cache directories. **Do not deploy v0.1.5 to production systems processing user-uploaded documents without sandboxing and privilege isolation.**
-  - **Recommendation role:** Core—presence of unpatched critical CVE is a must-carry caveat for any production deployment recommendation.
+- **[HIGH]** MarkItDown dependency security requires environment verification — Earlier analysis claimed v0.1.5 pinned vulnerable pdfminer.six 20251107. Live source checks on 2026-05-02 show both the `v0.1.5` tag and `main` declare `pdfminer.six>=20251230` and `mammoth~=1.11.0`. The correct production guidance is to verify the resolved environment installs those patched floors, run vulnerability scanning, and sandbox untrusted document processing. [GitHub security advisory](https://github.com/microsoft/markitdown/security), [CVE-2025-70559](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-70559)
+  - **Current state:** MarkItDown v0.1.5 package metadata declares the patched pdfminer.six floor required for GHSA-f83h-ghpp-7wcc mitigation.
+  - **Patch requirement:** Verify `pdfminer.six>=20251230` and `mammoth>=1.11.0` in the installed runtime; do not rely on transitive dependency resolution blindly.
+  - **Risk scope:** Applies most strongly to systems processing untrusted PDF/DOCX input or systems where unprivileged users have access to writable cache directories.
+  - **Recommendation role:** Core—dependency verification and sandboxing remain must-carry caveats for production deployment.
 
-- **[HIGH]** CVE-2025-64512: RCE via malicious PDF in pdfminer.six <20251107 — pdfminer.six <20251107 uses pickle.loads() for CMap deserialization. Malicious PDF can redirect pickle.gz loading for remote code execution. MarkItDown v0.1.3 was vulnerable before Dec 2025 patch (v0.1.4). [CVE-2025-64512](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-64512)
-  - **Historical note:** v0.1.5 addressed this CVE but introduced a distinct vulnerability (GHSA-f83h-ghpp-7wcc).
+- **[HIGH]** CVE-2025-64512: RCE via malicious PDF in pdfminer.six <20251107 — pdfminer.six <20251107 uses pickle.loads() for CMap deserialization. Malicious PDF can redirect pickle.gz loading for remote code execution. MarkItDown v0.1.3 was vulnerable before the later pdfminer.six patch line. [CVE-2025-64512](https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-64512)
+  - **Historical note:** Current MarkItDown v0.1.5 metadata declares `pdfminer.six>=20251230`; runtime verification is still required because stale lockfiles can override dependency floors.
 
 - **[MEDIUM]** Prompt injection risk in LLM pipelines — When feeding MarkItDown output to language models, document content flows directly into LLM context without mention of prompt-injection mitigations. A malicious PDF could contain crafted text like "Ignore previous instructions" or other injection payloads that influence LLM behavior. [Security reviewer protocol](internal)
   - **Mitigation:** Use prompt-engineering practices to isolate document content from system instructions: (a) Structure prompts with explicit delimiters (`[DOCUMENT START]...[DOCUMENT END]`), (b) Use system-prompt prefix that establishes instruction hierarchy, (c) Implement output guardrails to reject model responses that appear to leak prompts.
@@ -112,7 +111,7 @@ status: complete
 
 - **Encoding instability requires document pre-screening in production.** Non-ASCII documents crash the tool. Multilingual pipelines are not viable without upstream filtering or tool replacement.
 
-- **Unpatched CVE in current stable release (v0.1.5) prevents immediate production deployment without manual remediation.** Users must manually upgrade pdfminer.six to 20251230+ before deploying. Dependency upgrade path is unclear; MarkItDown v0.1.6 release date unknown.
+- **Dependency resolution must be verified before production deployment.** The earlier claim that v0.1.5 is unpatched is stale; live package metadata declares `pdfminer.six>=20251230`. Users must still verify the installed environment resolves to patched versions before processing untrusted documents.
 
 - **Wrapper architecture means MarkItDown cannot exceed underlying library quality.** pdfminer is text-only; python-docx lacks merged-cell and nesting support. Tool improvement requires upstream library improvements.
 
@@ -124,7 +123,7 @@ status: complete
 
 - **XLSX conversion quality** — Zero quality data on Excel file conversion (formulas, structure preservation, performance). Landscape claims XLSX support; no evidence provided beyond "converts to Markdown tables."
 
-- **Patch adoption timeline for GHSA-f83h-ghpp-7wcc** — MarkItDown v0.1.6+ release date unknown as of 2026-04-26. Unclear whether next version will upgrade pdfminer.six to 20251230+.
+- **Patch adoption timeline for GHSA-f83h-ghpp-7wcc** — Live check on 2026-05-02 shows v0.1.5 already declares `pdfminer.six>=20251230`; remaining question is whether downstream installs and lockfiles actually resolve to the patched version.
 
 - **Azure Document Intelligence integration cost-performance at scale** — Deep-Dive mentions Azure ($1-5/page) as fallback for complex PDFs; total pipeline cost unknown. No TCO analysis or hybrid pipeline benchmarks available.
 

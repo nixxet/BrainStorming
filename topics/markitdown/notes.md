@@ -11,7 +11,7 @@ status: complete
 
 ### Rapid Adoption and Brand Positioning
 
-- **[HIGH]** MarkItDown reached 87,000 GitHub stars by April 2026, gaining 25,000 stars within two weeks of December 2024 launch. Growth attributed to Microsoft brand recognition and "universal converter" marketing narrative rather than sustained technical community recommendation within specialized document-processing circles. — [MarkItDown GitHub](https://github.com/microsoft/markitdown), [Yage.ai MarkItDown survey](https://yage.ai/share/markitdown-survey-en-20260412.html)
+- **[HIGH]** MarkItDown reached ~119,300 GitHub stars by 2026-05-02, after reaching 87,000 by April 2026 and gaining 25,000 stars within two weeks of December 2024 launch. Growth attributed to Microsoft brand recognition and "universal converter" marketing narrative rather than sustained technical community recommendation within specialized document-processing circles. — [MarkItDown GitHub](https://github.com/microsoft/markitdown), [Yage.ai MarkItDown survey](https://yage.ai/share/markitdown-survey-en-20260412.html)
 
 - **[MEDIUM-HIGH]** Marketing narrative emphasizes breadth (29+ formats) while masking concentrated real-world strength in Office documents only. This gap between positioning and capability drives adoption expectations misaligned with production performance. — [Yage.ai survey](https://yage.ai/share/markitdown-survey-en-20260412.html)
 
@@ -40,9 +40,9 @@ status: complete
 
 - **[MEDIUM]** MarkItDown is unified Python interface to existing third-party libraries: mammoth (Word/DOCX), pandas + openpyxl (Excel), python-pptx (PowerPoint), pdfminer.six (PDF), BeautifulSoup + markdownify (HTML). This is not a novel document processing engine. — [Yage.ai survey](https://yage.ai/share/markitdown-survey-en-20260412.html), [InfoWorld assessment](https://www.infoworld.com/article/3963991/markitdown-microsofts-open-source-tool-for-markdown-conversion.html)
 
-- **[MEDIUM-HIGH]** Critical dependency risk: mammoth (Word converter) shows signs of resumed maintenance (v1.12.0 released March 2026 with security patches), but historical dormancy (2018–2026) represents ongoing risk. Single point of failure for DOCX support; if mammoth breaks or vulnerabilities discovered, MarkItDown's core strength is compromised. Continue monitoring mammoth repository monthly for maintenance signals. — [GitHub source inspection](https://github.com/felicette/mammoth.py), [PyPI Releases](https://pypi.org/project/mammoth/)
+- **[MEDIUM-HIGH]** Critical dependency risk: mammoth (Word converter) shows signs of resumed maintenance (v1.12.0 released March 2026 with security patches), but historical dormancy (2018–2026) represents ongoing risk. Single point of failure for DOCX support; if mammoth breaks or vulnerabilities discovered, MarkItDown's core strength is compromised. Continue monitoring mammoth repository monthly for maintenance signals. — [GitHub source inspection](https://github.com/mwilliamson/python-mammoth), [PyPI Releases](https://pypi.org/project/mammoth/)
 
-- **[HIGH]** Dependency Vulnerabilities — As of April 2026, third-party dependencies carry critical CVEs: (1) **mammoth <1.11.0:** CVE-2025-11849 (directory traversal, CVSS 9.3) allows arbitrary file read via crafted DOCX documents with external image links; fix available in v1.11.0 (October 2025 release); (2) **pdfminer.six <20251107:** CVE-2025-64512 (arbitrary code execution, CVSS 8.6) allows RCE via malicious PDF files through unsafe pickle deserialization; fix merged to main December 2025, pending stable release. Both vulnerabilities are in the primary processing path for Office and PDF documents respectively. Production deployments must enforce version constraints and consider document-source trust model before deployment. If processing any untrusted documents, upgrade to patched versions immediately or implement document-source verification and sandboxing.
+- **[HIGH]** Dependency Vulnerabilities — As of 2026-05-02, MarkItDown v0.1.5 declares patched dependency floors for the two primary risks checked live: **mammoth~=1.11.0** and **pdfminer.six>=20251230**. Historical vulnerable ranges remain important: mammoth <1.11.0 carried CVE-2025-11849 (directory traversal, CVSS 9.3), and pdfminer.six <20251107 carried CVE-2025-64512 (arbitrary code execution, CVSS 8.6). Production deployments must still enforce resolved dependency versions, run vulnerability scans, and consider document-source trust model before processing untrusted files.
 
 ### Encoding Instability in Production
 
@@ -112,7 +112,7 @@ status: complete
 
 ## Counterarguments & Risks
 
-- **GitHub stars indicate product quality** — 87,000 stars reflect Microsoft brand recognition and novelty, not technical merit or production suitability. Document-conversion specialists recommend Docling for PDFs and MarkItDown conditionally for Office documents only.
+- **GitHub stars indicate product quality** — ~119,300 stars as of 2026-05-02 reflect Microsoft brand recognition and novelty, not technical merit or production suitability. Document-conversion specialists recommend Docling for PDFs and MarkItDown conditionally for Office documents only.
 
 - **Plugin ecosystem will mature rapidly** — Plugin architecture is only ~6 months old. Nascent ecosystems typically require 12–24 months to establish maturity, vetting processes, and community trust. Current plugin availability is limited; third-party plugin maintenance risk mirrors core library risk.
 
