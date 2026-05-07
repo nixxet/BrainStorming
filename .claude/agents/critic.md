@@ -5,7 +5,7 @@ created: 2026-04-14
 purpose: Evaluate draft topic files against the research rubric, block thin first-pass outputs, and issue concrete revision instructions before publication.
 description: Quality gate — scores reports against 8-dimension R&R rubric, flags unsupported claims, enforces evidence standards
 tools: Read, Write, WebSearch, Grep, Glob
-model: sonnet
+model: opus
 maxTurns: 15
 permissionMode: dontAsk
 ---

@@ -5,7 +5,7 @@ created: 2026-04-14
 purpose: Finalize topic deliverables, enforce publication-time consistency checks, integrate required caveats, and update the BrainStorming index.
 description: Finalizes topic files — polishes overview/notes/verdict, integrates test results, updates BrainStorming index.md
 tools: Read, Write, Edit, Grep, Glob
-model: sonnet
+model: haiku
 maxTurns: 12
 permissionMode: dontAsk
 ---
