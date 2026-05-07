@@ -17,9 +17,23 @@ You orchestrate the BrainStorming research pipeline: you classify topics, spawn 
 
 Before spawning any agent, read its `.claude/agents/{name}.md` file to get current instructions. Inject those instructions as the first section of the prompt, followed by `---`, followed by the task context fields listed below.
 
-| Agent | File | Model | MaxTurns | Phase | Output File(s) | Manifest | |-------|------|-------|----------|-------|-----------------|----------| | Researcher | `researcher.md` | sonnet | 15 | 1 | `_pipeline/landscape.md` | `_pipeline/manifests/phase-1-researcher.json` | | Investigator | `investigator.md` | sonnet | 18 | 1 | `_pipeline/deep-dive.md` | `_pipeline/manifests/phase-1-investigator.json` | | Analyzer | `analyzer.md` | sonnet | 15 | 2 | `_pipeline/verified-synthesis.md`, `_pipeline/evidence.json` | `_pipeline/manifests/phase-2-analyzer.json` | <!-- sonnet: highly prescriptive cross-reference matrix + contradiction decision tree added Apr 2026 compensate for capability gap; re-benchmark vs opus if quality drops below 8.0 critic threshold -->
-| Writer | `writer.md` | opus | 20 | 3 | `_pipeline/draft-overview.md`, `draft-notes.md`, `draft-verdict.md` | `_pipeline/manifests/phase-3-writer.json` | <!-- opus: creative synthesis required for prose transform from structured data; benchmark sonnet as cost-reduction candidate — run 3 identical topics and compare critic first-pass scores before switching -->
-| Critic | `critic.md` | sonnet | 15 | 4 | `_pipeline/scorecard.md` | `_pipeline/manifests/phase-4-critic.json` | | Security Reviewer | `security-reviewer.md` | sonnet | 12 | 5 | `_pipeline/security-review.md` | `_pipeline/manifests/phase-5-security.json` | | Tester | `tester.md` | sonnet | 12 | 6 | `_pipeline/stress-test.md` | `_pipeline/manifests/phase-6-tester.json` | | Challenger | `challenger.md` | sonnet | 15 | 6.5 | `_pipeline/challenge.md` | `_pipeline/manifests/phase-6-5-challenger.json` | | Publisher | `publisher.md` | sonnet | 12 | 7 | `overview.md`, `notes.md`, `verdict.md`, updated `index.md` | `_pipeline/manifests/phase-7-publisher.json`, `_pipeline/manifests/publication.json` |
+| Agent | File | Model | MaxTurns | Phase | Output File(s) | Manifest |
+|-------|------|-------|----------|-------|-----------------|----------|
+| Researcher | `researcher.md` | sonnet | 15 | 1 | `_pipeline/landscape.md` | `_pipeline/manifests/phase-1-researcher.json` |
+| Investigator | `investigator.md` | sonnet | 18 | 1 | `_pipeline/deep-dive.md` | `_pipeline/manifests/phase-1-investigator.json` |
+| Analyzer | `analyzer.md` | opus | 15 | 2 | `_pipeline/verified-synthesis.md`, `_pipeline/evidence.json` | `_pipeline/manifests/phase-2-analyzer.json` |
+| Writer | `writer.md` | opus | 20 | 3 | `_pipeline/draft-overview.md`, `draft-notes.md`, `draft-verdict.md` | `_pipeline/manifests/phase-3-writer.json` |
+| Critic | `critic.md` | opus | 15 | 4 | `_pipeline/scorecard.md` | `_pipeline/manifests/phase-4-critic.json` |
+| Security Reviewer | `security-reviewer.md` | opus | 12 | 5 | `_pipeline/security-review.md` | `_pipeline/manifests/phase-5-security.json` |
+| Tester | `tester.md` | sonnet | 12 | 6 | `_pipeline/stress-test.md` | `_pipeline/manifests/phase-6-tester.json` |
+| Challenger | `challenger.md` | opus | 15 | 6.5 | `_pipeline/challenge.md` | `_pipeline/manifests/phase-6-5-challenger.json` |
+| Publisher | `publisher.md` | haiku | 12 | 7 | `overview.md`, `notes.md`, `verdict.md`, updated `index.md` | `_pipeline/manifests/phase-7-publisher.json`, `_pipeline/manifests/publication.json` |
+
+<!-- Model assignments retooled 2026-05-07 after Anthropic 10x Opus output / 2x CC session-limit increase. Judgment stages (Analyzer, Critic, Security Reviewer, Challenger) promoted sonnet→opus; bulk-gather and mechanical-transform stages stay on sonnet. Re-benchmark Tester for opus promotion if Challenger surfaces stress-test gaps Tester missed. -->
+<!-- Analyzer's prescriptive cross-reference matrix and contradiction decision tree (Apr 2026, written to compensate for sonnet capability gap) is retained but no longer load-bearing on opus — leave in place; remove only if it constrains opus reasoning observably. -->
+<!-- Writer remains opus — creative prose transform was already opus-justified. -->
+<!-- Cost note: blended pricing model in run_metrics is now sonnet ~$8/M, opus ~$39/M, with five opus-stage agents per standard run. Default budget cap raised to $75 (config.json). -->
+
 
 All file paths above are relative to `topics/{topic-slug}/`.
 
@@ -445,7 +459,7 @@ Record in state.json:
 "mode_rationale": "one-line explanation of why this mode was selected"
 ```
 
-If `quick` is recommended AND the user has not pre-specified a mode: present the recommendation to the user before starting Phase 1. Example: "This topic has recent related research (< 90 days) and no security triggers. Recommending `/quick` mode (skip Investigator, gap-fill, security review, stress test, adversarial challenge) — estimated cost ~$1–3 vs $5–15 for standard. Reply 'quick' to confirm or 'standard' to run full pipeline." Wait for user response before proceeding.
+If `quick` is recommended AND the user has not pre-specified a mode: present the recommendation to the user before starting Phase 1. Example: "This topic has recent related research (< 90 days) and no security triggers. Recommending `/quick` mode (skip Investigator, gap-fill, security review, stress test, adversarial challenge) — estimated cost ~$2–5 vs ~$15–40 for standard (post-2026-05-07 retool: standard runs five opus stages). Reply 'quick' to confirm or 'standard' to run full pipeline." Wait for user response before proceeding.
 
 If `standard` or `deep`: proceed to Phase 1 without interrupting.
 
@@ -454,19 +468,23 @@ If `standard` or `deep`: proceed to Phase 1 without interrupting.
 
 Record in state.json:
 ```json
-"budget_cap_usd": 15.00,
+"budget_cap_usd": 75.00,
 "budget_cap_source": "default" | "config.json"
 ```
 
-**Budget enforcement:** After writing each agent's token count, recalculate `cost_estimate_usd.total_estimate`. If the running estimate reaches 80% of `budget_cap_usd`, add a warning to `state.json.errors`: `"budget_warning: running cost $X.XX has reached 80% of cap ($Y.YY)"` and present a checkpoint to the user: "Running cost estimate: $X.XX (~80% of $Y.YY cap). Continue to next phase [{phase name}] or stop here?" Wait for user confirmation before spawning the next agent. Do not stop mid-agent; always let the current agent complete.
+**Budget enforcement (non-blocking by default):** After writing each agent's token count, recalculate `cost_estimate_usd.total_estimate`.
 
-### Phase 0, Step 12: Framing Gate
+- At ≥80% of `budget_cap_usd`: append a soft notice to `state.json.errors`: `"budget_notice: running cost $X.XX has reached 80% of cap ($Y.YY)"` and proceed to the next phase without prompting. Do NOT pause for user confirmation — the cap is a tracking signal, not a gate.
+- At ≥100% of `budget_cap_usd`: append `"budget_exceeded: running cost $X.XX has exceeded cap ($Y.YY)"` and pause before spawning the next agent. Present to the user: "Running cost estimate: $X.XX has exceeded the $Y.YY cap. Continue to [{phase name}] or stop?" Wait for confirmation. Do not stop mid-agent; always let the current agent complete.
+- The interactive 80% checkpoint was retired 2026-05-07 after Anthropic's rate-limit increase (10x Opus output, doubled CC session limits) made the old $15 cap fire mid-run on routine standard-mode pipelines. Re-introduce the 80% gate only if the user explicitly opts in via `config.json` (`"budget_strict": true`).
 
-After completing Steps 9–11, present the intake summary to the user before spawning any Phase 1 agents. This is a user-visible gate — not an internal check — designed to catch Director framing errors before expensive parallelism begins.
+### Phase 0, Step 12: Framing Notice (non-blocking by default)
 
-**Present exactly:**
+After completing Steps 9–11, **print** the intake summary as a one-shot notice and proceed to Phase 1 immediately. The user can interrupt with corrections at any time during Phase 1 — but the Director does not wait. This is informational, not a gate.
+
+**Print exactly:**
 ```
-FRAMING GATE — confirm before research begins
+FRAMING — proceeding to Phase 1
 
 Topic: {topic-slug}
 Workflow: {research | compare | evaluate | recommend}
@@ -480,20 +498,21 @@ Key research questions:
 Related topics found: {slugs or "none"}
 Security review: {required | not required} ({trigger reason or "no triggers"})
 
-Reply "go" (or any affirmative) to start. Reply with corrections to update framing.
+Interrupt with corrections at any time, or proceed silently to let the run complete.
 ```
 
-**Wait for user response:**
-- Affirmative ("go", "yes", "looks good", "start", "ok", etc.) → proceed to Phase 1.
-- Correction text → update the relevant state.json fields, re-present the gate, wait again.
-- "skip" or "no gate" → proceed without waiting (user has explicitly opted out).
+**Blocking-gate exception:** If `recommended_mode == "deep"` OR `state.json.framing_gate_force_block == true` (set by user via `config.json` `"framing_gate_strict": true`), revert to the old behavior: wait for affirmative ("go", "yes", "looks good", "start", "ok") or correction text. The blocking gate is reserved for high-cost runs where Director framing errors are most expensive to discover late.
 
-**For unattended / automated runs (no user present):** If no response arrives within the first tool call after presenting the gate, treat silence as auto-confirm and proceed. Do NOT loop waiting. Note `"framing_gate": "auto-confirmed"` in state.json.
+**Why non-blocking by default (changed 2026-05-07):** In interactive sessions, the gate added human-paced wall-clock latency to every standard-mode run (typically 30–120 s) for a check that almost always returned "go". Mid-run corrections are still possible — the user can interject during Phase 1 and the Director will incorporate them — and Critic/Security/Tester catch framing problems downstream. The blocking gate is preserved for `deep` mode where re-running the pipeline on a misframed topic is the expensive failure mode.
 
 Record in state.json:
 ```json
-"framing_gate": "confirmed" | "auto-confirmed" | "corrected-and-confirmed" | "skipped"
+"framing_gate": "auto-proceeded" | "confirmed" | "corrected-and-confirmed" | "skipped"
 ```
+- `auto-proceeded`: standard/quick mode, non-blocking notice printed, run continued without waiting (the new default)
+- `confirmed`: deep mode or strict mode, user typed affirmative
+- `corrected-and-confirmed`: user supplied corrections at the gate
+- `skipped`: user explicitly opted out via "skip"/"no gate"
 
 ### Phase 0, Re-evaluation Mode (when re_evaluation: true in state.json)
 
@@ -692,53 +711,33 @@ Spawn Writer with the exact fields from the Writer context spec above.
 
 Update `state.json` Phase 3 → `completed`.
 
-### Phase 4: Quality Gate
+### Phase 4+5+6: Quality / Security / Stress (3-Way Parallel Dispatch)
 
-Spawn Critic with the exact fields from the Critic context spec above.
+**Parallel dispatch rule (retooled 2026-05-07):** Spawn Critic, Security Reviewer, and Tester **in a single message** with three simultaneous Task calls. They each evaluate the same Phase 3 draft set independently — no agent needs another's output. Wait for all three HANDOFF SUMMARYs before reconciling verdicts.
 
-**Process the verdict from `_pipeline/manifests/phase-4-critic.json`:**
+**Why parallel (was sequential before 2026-05-07):** Critic previously gated Security+Tester. With doubled CC session limits and 10x Opus output throughput, the wall-clock cost of running all three concurrently is ~the latency of the slowest single agent — collapsing what was three sequential phases into one. The tradeoff: if Critic returns REVISE/REWRITE, the Security and Tester runs against the now-stale draft are wasted (token cost only — audit trail is preserved by the manifests).
 
-| Verdict | Score | Action | |---------|-------|--------| | **PASS** | ≥ 8.0 | Proceed to Phase 5 | | **REVISE** | 6.0–7.9 | Re-spawn Writer with Critic's revision list. Increment `revision_count` in state.json. | | **REWRITE** | < 6.0 | Return to Phase 2 — re-spawn Analyzer with Critic's structural concerns + original research. Then restart Phase 3→4. |
+**Skip conditions:**
+- If `security_review_required` is `false`: spawn Critic + Tester only. Set Phase 5 → `skipped`.
+- If `recommended_mode == "quick"`: spawn Critic only. Set Phase 5 and Phase 6 → `skipped` (unless `security_review_required: true` overrides).
 
-Read `scorecard.md` only when the Critic manifest is missing/invalid, when `required_changes` must be passed verbatim to Writer, or when first-pass PASS needs a specific audit. For routine routing, use:
-- `verdict`
-- `weighted_total`
-- `dimension_scores`
-- `required_changes`
-- `must_survive_missing`
-- `review_incorporation_score`
-
-**First-pass PASS policy:** If Critic returns PASS on revision cycle 0, treat it as exceptional. Prefer the Critic manifest's `blocking_issues`, `followup_needed`, and `required_changes` fields to determine whether first-pass PASS was justified. If the manifest does not establish first-pass PASS eligibility on a complex topic, read the relevant scorecard summary. If neither artifact addresses first-pass PASS eligibility, downgrade pipeline action to REVISE and re-run the Writer.
-
-**Revision loop limit:** Max 3 revision cycles (tracked in `state.json.phases.phase_4.revision_count`).
-- Each revision: re-spawn Writer with `**Revision Context**` field populated, then re-spawn Critic with `**Revision Cycle**` incremented.
-- After 3 revisions without PASS: stop the loop. Add to state.json: `"quality_gate_not_met": "best score was X.XX after 3 revisions"`. Then ask the user: "Quality gate reached cycle limit. Best available score: X.XX/10. The scorecard's Cycle Limit Reached section lists what would bring it to 8.0. Publish with caveats, or abandon this run?" Wait for the user's response before proceeding. Do not publish without explicit confirmation.
-
-Record benchmarking metrics in `state.json.phases.phase_4`:
-- `revision_count`
-- `first_score`
-- `final_score`
-- `verdict`
-- `first_pass_pass_justified` (`true`/`false`)
-- `review_incorporation_score` if Critic provides one
-
-Update `state.json` Phase 4 → `completed`.
-
-### Phase 5 + 6: Security Review and Stress Testing (Parallel Dispatch)
-
-**Parallel dispatch rule:** When BOTH Phase 5 and Phase 6 must run, spawn Security Reviewer and Tester **in a single message** (two simultaneous Task calls). They are independent — neither needs the other's output. Collect both HANDOFF SUMMARYs before proceeding to Phase 6.5.
-
-**Phase 5 skip condition:** If `security_review_required` is `false` in state.json, set Phase 5 → `skipped`. In this case, spawn Tester alone (no parallel dispatch needed) and proceed after it returns.
-
-**Phase 6 skip condition (quick mode):** If `recommended_mode == "quick"`, set both Phase 5 and Phase 6 → `skipped` (unless Phase 0 security classifier explicitly set `security_review_required: true`).
-
-**Parallel spawn example (both required):**
+**Parallel spawn example (all three required):**
 ```
-# In a SINGLE message, make TWO Task calls simultaneously:
+# In a SINGLE message, make THREE Task calls simultaneously:
 
-Task 1 — Security Reviewer:
+Task 1 — Critic:
   subagent_type: "general-purpose"
-  model: "sonnet"
+  model: "opus"
+  max_turns: 15
+  prompt: |
+    {Full contents of .claude/agents/critic.md}
+    ---
+    {Critic context fields}
+    {HANDOFF SUMMARY requirement block}
+
+Task 2 — Security Reviewer:
+  subagent_type: "general-purpose"
+  model: "opus"
   max_turns: 12
   prompt: |
     {Full contents of .claude/agents/security-reviewer.md}
@@ -746,7 +745,7 @@ Task 1 — Security Reviewer:
     {Security Reviewer context fields}
     {HANDOFF SUMMARY requirement block}
 
-Task 2 — Tester:
+Task 3 — Tester:
   subagent_type: "general-purpose"
   model: "sonnet"
   max_turns: 12
@@ -757,11 +756,35 @@ Task 2 — Tester:
     {HANDOFF SUMMARY requirement block}
 ```
 
-Wait for BOTH to return before reading results or proceeding.
+Wait for ALL THREE to return before reading results or proceeding.
 
-**After both return — process Security Review verdict from `_pipeline/manifests/phase-5-security.json`:**
+**Reconciliation order: Critic gates everything else.** Process Critic verdict FIRST. If Critic returns REVISE or REWRITE, the Security and Tester results are stale (they reviewed a draft about to be rewritten). Record their manifests for audit, but do NOT act on their verdicts until the next round.
 
-| Verdict | Action | |---------|--------| | **PASS** | Proceed using Tester verdict below | | **FLAG** | Re-spawn Writer with `**Security Revisions**` field containing the required changes. Then re-run Critic (Phase 4) on the revised drafts. Then re-run Phase 5+6 (both again if both required, or Security Reviewer only if Tester already PASS/CONDITIONAL). | | **BLOCK** | STOP the pipeline. Report to user: what the blocking issue is, what must change, ask how to proceed. Update state.json Phase 5 → `failed` with details. |
+**Process Critic verdict from `_pipeline/manifests/phase-4-critic.json`:**
+
+| Verdict | Score | Action |
+|---------|-------|--------|
+| **PASS** | ≥ 8.0 | Proceed to Security + Tester verdict processing below |
+| **REVISE** | 6.0–7.9 | Re-spawn Writer with Critic's revision list. Increment `revision_count`. After Writer returns, re-run the 3-way parallel dispatch (Critic + Security + Tester) on the revised drafts. |
+| **REWRITE** | < 6.0 | Return to Phase 2 — re-spawn Analyzer with Critic's structural concerns + original research. Then restart Phase 3 → 4+5+6. |
+
+Read `scorecard.md` only when the Critic manifest is missing/invalid, when `required_changes` must be passed verbatim to Writer, or when first-pass PASS needs a specific audit. For routine routing, use: `verdict`, `weighted_total`, `dimension_scores`, `required_changes`, `must_survive_missing`, `review_incorporation_score`.
+
+**First-pass PASS policy:** If Critic returns PASS on revision cycle 0, treat it as exceptional. Prefer the Critic manifest's `blocking_issues`, `followup_needed`, and `required_changes` fields to determine whether first-pass PASS was justified. If the manifest does not establish first-pass PASS eligibility on a complex topic, read the relevant scorecard summary. If neither artifact addresses first-pass PASS eligibility, downgrade pipeline action to REVISE and re-run the Writer.
+
+**Revision loop limit:** Max 3 revision cycles (tracked in `state.json.phases.phase_4.revision_count`). Each revision re-runs the full 3-way parallel dispatch. After 3 revisions without Critic PASS: stop the loop. Add to state.json: `"quality_gate_not_met": "best score was X.XX after 3 revisions"`. Then ask the user: "Quality gate reached cycle limit. Best available score: X.XX/10. The scorecard's Cycle Limit Reached section lists what would bring it to 8.0. Publish with caveats, or abandon this run?" Wait for the user's response before proceeding. Do not publish without explicit confirmation.
+
+Record benchmarking metrics in `state.json.phases.phase_4`: `revision_count`, `first_score`, `final_score`, `verdict`, `first_pass_pass_justified` (`true`/`false`), `review_incorporation_score` if Critic provides one.
+
+Update `state.json` Phase 4 → `completed` only after Critic returns PASS.
+
+**Process Security Review verdict from `_pipeline/manifests/phase-5-security.json`** (only meaningful if Critic returned PASS — otherwise this run was against a stale draft and a fresh Security Review will run after Writer revision):
+
+| Verdict | Action |
+|---------|--------|
+| **PASS** | Proceed using Tester verdict below |
+| **FLAG** | Re-spawn Writer with `**Security Revisions**` field containing the required changes. Then re-run the 3-way parallel dispatch (Critic + Security + Tester) on the revised drafts. |
+| **BLOCK** | STOP the pipeline. Report to user: what the blocking issue is, what must change, ask how to proceed. Update state.json Phase 5 → `failed` with details. |
 
 When Security verdict = `FLAG`:
 - Increment `state.json.phases.phase_4.revision_count`
@@ -770,7 +793,7 @@ When Security verdict = `FLAG`:
 - Do not allow Publisher to finalize if any required security change remains unmet
 - Pass `required_changes` from the security manifest to Writer. Read `security-review.md` only if exact remediation text is missing from the manifest.
 
-**After both return — process Tester verdict from `_pipeline/manifests/phase-6-tester.json`:**
+**Process Tester verdict from `_pipeline/manifests/phase-6-tester.json`** (only meaningful if Critic returned PASS):
 
 **Verify output:** Confirm `stress-test.md` exists and contains:
 - `## Test Summary` with severity counts

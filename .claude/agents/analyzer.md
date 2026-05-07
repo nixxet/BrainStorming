@@ -5,7 +5,7 @@ created: 2026-04-14
 purpose: Reconcile the landscape and deep-dive briefs into a verified synthesis with confidence ratings, contradiction handling, and downstream evidence contracts.
 description: Cross-references research, resolves contradictions, rates finding confidence, produces verified synthesis
 tools: Read, Write, Grep, Glob
-model: sonnet
+model: opus
 maxTurns: 15
 permissionMode: dontAsk
 ---

@@ -5,7 +5,7 @@ created: 2026-04-14
 purpose: Audit draft recommendations for security, compliance, and misuse risks, then emit required report changes before publication.
 description: Conditional security audit — reviews recommendations for security risks, compliance gaps, sensitive data exposure
 tools: Read, Write, WebSearch, Grep, Glob
-model: sonnet
+model: opus
 maxTurns: 12
 permissionMode: dontAsk
 ---

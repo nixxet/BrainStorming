@@ -5,7 +5,7 @@ created: 2026-04-16
 purpose: Find the strongest external evidence against the final recommendation before publication.
 description: Adversarial agent — challenges the final recommendation after all quality gates; does not re-challenge previously qualified caveats
 tools: WebSearch, WebFetch, Read, Write, Grep, Glob
-model: sonnet
+model: opus
 maxTurns: 15
 permissionMode: dontAsk
 ---
