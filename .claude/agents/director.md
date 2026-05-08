@@ -67,6 +67,7 @@ Create this file at Phase 0. Update it after every phase completes or fails. Thi
   "future_project_scope": "preserve value for future unknown projects",
   "security_review_required": true,
   "re_evaluation": false,
+  "legacy_grandfathered": false,
   "current_date": "2026-04-06",
   "user_request": "the user's original request verbatim",
   "related_topics": [],
@@ -395,6 +396,22 @@ After writing per-agent counts, update `total_subagent` as the running sum of al
 If no `<usage>` block appears in a result, record `null` for that agent and add `"token_capture_failed": "{agent_key}"` to `errors[]`.
 
 ### Phase 0: Intake & Classification
+
+**Step 0 — Invocation guardrail (mandatory, runs before anything else):**
+
+Read `.claude/state/last-invocation.json`. This token is written by the `UserPromptSubmit` hook only when the user types one of the research slash commands (`/research`, `/evaluate`, `/quick`, `/compare`, `/recommend`). Verify all of:
+
+- The file exists.
+- `written_at` is within the last 30 minutes.
+- `workflow` matches the workflow you are about to run (or is compatible — e.g., `quick` is the quick-mode of `research`).
+
+If the file is missing, expired, or the workflow does not match, **HALT**. Print this exact message to the user and stop:
+
+> Pipeline invocation guard: this run was not initiated via a `/research`, `/evaluate`, `/quick`, `/compare`, or `/recommend` slash command. Re-invoke the pipeline by typing the slash command directly. The pipeline must not be launched via Agent-tool delegation, scripted invocation, or by another model — those bypass the integrity envelope (see `docs/reliability/IMPLEMENTATION_STATUS.md`).
+
+If valid, delete `.claude/state/last-invocation.json` (single-use) and continue with the intake steps below.
+
+---
 
 1. Parse the user's request. Extract:
    - **Topic name** (derive slug)
@@ -883,6 +900,19 @@ Read full `scorecard.md`, `security-review.md`, `stress-test.md`, or `challenge.
 If any mismatch is found, repair `state.json` before marking the run complete. If the mismatch cannot be repaired confidently, add a concrete error entry and tell the user in delivery.
 
 ### Phase 7: Publishing
+
+**Pre-publication gate (mandatory for non-legacy topics):** Before spawning Publisher, run:
+
+```bash
+npm run check-publisher-gate -- --topic {topic-slug}
+```
+
+If exit code is non-zero, the run has integrity issues that must be addressed before publishing. Read the listed errors. You have three options:
+1. Fix the issue (e.g., have the responsible subagent re-emit a missing manifest, or run `npm run validate-pipeline-state:repair -- --topic {topic-slug}` to fix safe metric drift) and re-run the gate.
+2. If a deliberate quality-gate exception is warranted (e.g., score below 8.0 with documented justification), set `state.quality_gate_exception` to the justification string and re-run the gate.
+3. Return to the responsible phase to address the underlying problem.
+
+Legacy topics (`state.legacy_grandfathered === true`) auto-pass the gate.
 
 Spawn Publisher with the exact fields from the Publisher context spec above.
 

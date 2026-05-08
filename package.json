@@ -48,6 +48,9 @@
     "lint:agents": "node scripts/lint-agents.js",
     "diagnose-run": "node scripts/diagnose-run.js",
     "diagnose-run:all": "node scripts/diagnose-run.js --all",
+    "check-publisher-gate": "node scripts/check-publisher-gate.js",
+    "mark-legacy-topics": "node scripts/mark-legacy-topics.js",
+    "mark-legacy-topics:dry": "node scripts/mark-legacy-topics.js --dry-run",
     "prune-citation-cache": "node scripts/prune-citation-cache.js",
     "prune-citation-cache:dry": "node scripts/prune-citation-cache.js --dry-run"
   }
