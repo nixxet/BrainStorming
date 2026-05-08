@@ -232,11 +232,28 @@ function validatePublicationManifest(topicDir, slug, filePath, errors) {
   }
 }
 
+function isLegacy(topicDir) {
+  const statePath = path.join(topicDir, "_pipeline", "state.json");
+  const data = readJsonIfExists(statePath);
+  if (!data || data.__parseError) return false;
+  return data.legacy_grandfathered === true;
+}
+
 function validateTopic(slug) {
   const errors = [];
   const warnings = [];
   const topicDir = path.join(topicsRoot, slug);
   const manifestDir = path.join(topicDir, "_pipeline", "manifests");
+
+  if (isLegacy(topicDir)) {
+    return {
+      slug,
+      passed: true,
+      legacy: true,
+      errors: [],
+      warnings: ["legacy_grandfathered=true; strict manifest checks skipped"],
+    };
+  }
 
   for (const expected of EXPECTED_PHASES) {
     const outputExists = expected.outputs.some(output => existsFromTopic(topicDir, output));

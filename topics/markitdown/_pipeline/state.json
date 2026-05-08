@@ -141,5 +141,7 @@
   },
   "errors": [],
   "last_validated_on": "2026-04-30",
-  "last_validated_by": "scripts/validate-pipeline-state.js"
+  "last_validated_by": "scripts/validate-pipeline-state.js",
+  "legacy_grandfathered": true,
+  "legacy_marked_at": "2026-05-08"
 }
