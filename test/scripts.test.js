@@ -98,7 +98,7 @@ test("check-staleness --json emits parseable topic freshness data", () => {
   const payload = JSON.parse(result.stdout);
   assert.equal(payload.summary.skipped, 0);
   assert.ok(payload.summary.fresh >= 1);
-  assert.ok(payload.fresh.some(topic => topic.slug === "markitdown"));
+  assert.ok(payload.fresh.every(t => typeof t.slug === "string" && typeof t.lastResearched === "string"));
 });
 
 test("validate-pipeline-state skips reserved metadata directories", () => {

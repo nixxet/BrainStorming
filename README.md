@@ -8,7 +8,7 @@ It is designed to produce evidence-backed topic folders:
 - `notes.md` — findings, confidence ratings, caveats, and unresolved questions
 - `verdict.md` — recommendation, risks, alternatives, and next steps
 
-This public edition is sanitized for sharing. It keeps reusable pipeline structure and topic writeups, but omits private scratch files, local certificates, internal project-fit notes, and pipeline audit artifacts.
+Distribution outputs keep reusable pipeline structure and topic writeups. Local scratch files, certificates, project-fit notes, and pipeline audit artifacts are kept out of distribution by `.claudeignore` and the export step.
 
 ## Repository Structure
 
@@ -80,9 +80,12 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 | Command | Purpose |
 | --- | --- |
 | `npm run preflight:all` | Run local syntax, topic, state, staleness, and test gates |
-| `npm run release:check` | Run local preflight, secret scan, and public export |
+| `npm run release:check` | Run local preflight, secret scan, and distribution export |
+| `npm run check-hygiene` | Enforce the per-file citation floor and topic-folder contract |
+| `npm run check-hygiene:report` | Write a hygiene report under `topics/_meta/` |
+| `npm run migrate-schema-v1` | Idempotent migration of pipeline artifacts to schema v1 |
 | `npm run regenerate-index` | Rebuild topic indexes from published verdict files |
-| `npm run index:summary` | Generate the summary `topics/index.md` (alias: `index:leadership`) |
+| `npm run index:leadership` | Generate the summary `topics/index.md` |
 | `npm run dashboard` | Generate a local static dashboard under `dist/dashboard/` |
 | `npm run validate-pipeline-state` | Validate topic pipeline metadata when present |
 | `npm run validate:schemas` | Validate pipeline state and evidence files against repository schemas |
@@ -99,7 +102,7 @@ Every major finding should carry a confidence rating: `HIGH`, `MEDIUM`, `LOW`, o
 | `npm run check-staleness:report` | Flag stale topics by decay class |
 | `npm run topic-init` | Scaffold a new topic folder |
 | `npm run topic-validate:all` | Validate published topic structure |
-| `npm run export:public` | Create a sanitized public export under `dist/public/` (also emits `dist/public/index.json`) |
+| `npm run export:public` | Create a sanitized distribution export under `dist/public/` (also emits `dist/public/index.json`) |
 | `npm run lint:agents` | Lint all agent spec files for required frontmatter and sections |
 | `npm run diagnose-run -- --topic {slug}` | Diagnose a stalled or failed pipeline run, with recovery suggestions |
 | `npm run diagnose-run:all` | Diagnose pipeline status for all topics |
@@ -123,20 +126,20 @@ For detailed recovery guidance, see [docs/recovery.md](docs/recovery.md).
 2. Validate local health, including strict claim-support checks: `npm run preflight:all`.
 3. Optionally verify network citations: `npm run preflight:network`. **Note: requires live internet access; runtime scales with citation count.**
 4. Generate a benchmark report when needed: `npm run bench-report`.
-5. Generate summary views when needed: `npm run index:summary && npm run dashboard && npm run trend-report`.
-6. Create a public-safe export: `npm run export:public`.
+5. Generate summary views when needed: `npm run index:leadership && npm run dashboard && npm run trend-report`.
+6. Create a distribution-safe export: `npm run export:public`.
 
-## Public Export Model
+## Distribution Model
 
-BrainStorming treats `_pipeline/` artifacts as private internal audit data by default. Public releases should be generated through `npm run export:public`, which copies public deliverables and excludes private pipeline state, drafts, evidence internals, citation JSON, `_meta/`, temporary files, and common secret/certificate file types.
+BrainStorming treats `_pipeline/` artifacts as internal audit data. Distribution builds are produced through `npm run export:public`, which copies the published deliverables and excludes pipeline state, drafts, evidence internals, citation JSON, `_meta/`, temporary files, and common secret/certificate file types.
 
-Public topic deliverables are:
+Published deliverables per topic:
 
 - `topics/{topic-slug}/overview.md`
 - `topics/{topic-slug}/notes.md`
 - `topics/{topic-slug}/verdict.md`
 
-Private/internal artifacts include:
+Internal-only artifacts (not distributed):
 
 - `topics/{topic-slug}/_pipeline/`
 - `topics/_meta/`
@@ -146,12 +149,12 @@ Private/internal artifacts include:
 
 ## Publishing Notes
 
-Before making a fork or mirror public:
+Before distributing a build:
 
 1. Run a secret scanner such as `trufflehog filesystem . --only-verified`.
-2. Search for organization names, personal names, local paths, and private project names.
+2. Search for organization names, personal names, local paths, and internal project names.
 3. Run `npm run export:public`.
-4. Publish from the generated `dist/public/` folder or from a fresh repository, not from private repo history.
+4. Publish from the generated `dist/public/` folder or from a fresh repository, not directly from repo history.
 
 ## License
 

@@ -2,47 +2,59 @@
 
 BrainStorming is a standalone research hub for evaluating tools, frameworks, techniques, and ideas.
 
-Default stance:
-
-- Search first for present-day facts.
-- Separate evidence from interpretation.
-- Prefer specific recommendations over vague summaries.
-- Keep topic writeups useful outside any one organization or project.
+Default stance: **vertical-agnostic**. Research topics in their native domain, then explicitly extract reusable value for current and future projects.
 
 ## Structure
 
 ```text
 BrainStorming/
-  index.md
+  index.md               ← Topic registry — one row per topic, auto-updated by Publisher
   archived-topics.md
   topics/
     {topic-slug}/
       overview.md
       notes.md
       verdict.md
+      _pipeline/         ← Pipeline artifacts (audit trail, not primary content)
+    _meta/               ← Bench reports, citation checks, stale reports
+    _cross/              ← Cross-topic pattern analysis (/cross-analyze)
+    _tmp/                ← Temporary scratch — never committed
   .claude/
-    agents/
-    skills/
+    agents/              ← 12 pipeline agents
+    skills/              ← 5 pipeline skills
   scripts/
 ```
+
+## Running the Pipeline
+
+| Skill | Use When |
+|-------|----------|
+| `/research [topic]` | Full pipeline — landscape, options, key findings |
+| `/quick [topic]` | Fast research — no adversarial challenge, security review, or stress test |
+| `/compare [A] vs [B]` | Side-by-side evaluation |
+| `/evaluate [item]` | Deep single-item evaluation |
+| `/recommend [problem]` | Problem-first — research solutions, rank candidates |
+| `/cross-analyze [theme]` | Cross-topic synthesis — reads existing topics only |
 
 ## Dispatch Rules
 
 When the user message matches one of these patterns, read `.claude/agents/director.md` and run the matching workflow.
 
-| User Pattern | Workflow |
-| --- | --- |
-| `new topic: <url or name>` | research |
-| `research <topic>` | research |
-| `quick <topic>` | quick |
-| `compare <A> vs <B>` | compare |
-| `evaluate <item>` | evaluate |
-| `recommend <problem>` | recommend |
-| Bare GitHub/GitLab URL | evaluate |
-| `cross-analyze <theme>` | cross-analyze |
-| `verify citations [slug\|all]` | verify citations |
-| `refresh-stale` | staleness check plus re-research |
-| `diagnose <topic-slug>` | run diagnose-run.js for a topic and report |
+| User Pattern | Workflow | Director Receives |
+| --- | --- | --- |
+| `new topic: <url or name>` | research | Topic: the URL or name |
+| `research <topic>` | research | Topic: the topic text |
+| `quick <topic>` | quick | Topic: quick mode (no Investigator, no Phase 5/6/6.5) |
+| `compare <A> vs <B>` | compare | Comparison: the full text |
+| `evaluate <item>` | evaluate | Evaluate: the item text |
+| `recommend <problem>` | recommend | Problem: the problem text |
+| Bare GitHub/GitLab URL | evaluate | Evaluate: the URL |
+| `cross-analyze <theme>` | cross-analyze | Theme: the theme or keyword |
+| `verify citations [slug\|all]` | verify citations | URL verification |
+| `refresh-stale` | staleness check plus re-research | Staleness check + re-research |
+| `diagnose <topic-slug>` | run diagnose-run.js for a topic and report | Diagnostic: the slug |
+
+**refresh-stale:** Run `npm run check-staleness:report` → present Overdue Topics → user confirms slugs → dispatch as `/research {slug}` with `re_evaluation: true` in state.json.
 
 ## Cross-Analyze Workflow
 
@@ -64,7 +76,7 @@ For diagnostic output: `npm run diagnose-run -- --topic {slug}`.
 
 ## Quality Standard
 
-Published output should pass an 8-dimension quality gate:
+Published output should pass an 8-dimension quality gate (minimum **8.0/10**):
 
 | Dimension | Weight |
 | --- | ---: |
@@ -79,21 +91,40 @@ Published output should pass an 8-dimension quality gate:
 
 Rules:
 
-- No unsourced present-day claims.
-- Use `HIGH`, `MEDIUM`, `LOW`, or `UNVERIFIED` confidence labels.
+- **No unsourced present-day claims.** Every finding: HIGH / MEDIUM / LOW / UNVERIFIED confidence.
+- **Anti-fluff:** State what IS. Recommend or don't. Hedge only when evidence conflicts. No superlatives without data.
+- **Search-First for Present-Day Facts:** When making any claim about current state — pricing, version numbers, API behavior, feature availability, benchmarks, support status, active maintenance — use WebSearch or WebFetch to verify before writing. Training data is stale by definition for a research tool.
+- **Neutrality:** Separate topic-native analysis / reusable patterns / project fit. Evaluate by capability, architectural, operational, risk, and implementation overlap.
 - State what is known, what is uncertain, and what would change the recommendation.
 - Keep project-specific applicability generic unless the user provides a public project context.
-- Do not include secrets, credentials, private paths, private organization names, or internal project names in published topic files.
+- Do not include secrets, credentials, internal paths, organization names, or internal project names in published topic files.
 
 ## Topic Contract
 
-Each completed topic should contain:
+Each completed topic MUST contain:
 
-- `overview.md` — overview, concepts, stats, links
-- `notes.md` — evidence-backed findings and caveats
-- `verdict.md` — recommendation, risks, alternatives, next steps
+- `overview.md` — frontmatter: `title`, `tags`, `created`, `status`
+- `notes.md` — evidence-backed findings with confidence ratings
+- `verdict.md` — frontmatter: `title`, `tags`, `created`, `status`, `score`, `verdict`
+- `_pipeline/state.json` — pipeline run record
+- `_pipeline/evidence.json` — source provenance
 
-Optional private or local pipeline artifacts should stay out of public mirrors unless deliberately sanitized.
+Local or work-in-progress pipeline artifacts must be sanitized before any distribution. Use `npm run export:public` to produce a distribution-safe tree under `dist/public/`.
+
+## Post-Pipeline Security
+
+After every pipeline run, before `git add`:
+
+```bash
+npm run security:secrets
+npm run verify-citations -- --topic {topic-slug}
+```
+
+For deeper coverage:
+
+```bash
+trufflehog filesystem topics/{topic-slug}/_pipeline/ --only-verified
+```
 
 ## Maintenance
 
@@ -103,9 +134,18 @@ Optional private or local pipeline artifacts should stay out of public mirrors u
 - Use `scripts/diagnose-run.js --topic {slug}` to diagnose a stalled or failed pipeline run.
 - Use `scripts/lint-agents.js` to validate all agent spec files for structural integrity.
 - Use `scripts/prune-citation-cache.js` to remove stale citation cache entries.
-- Before public release, run secret scanning and text searches for private identifiers.
+- Use `scripts/check-hygiene.js` to enforce the citation floor and topic-folder contract.
+- Before distribution, run `npm run security:secrets` and text searches for sensitive identifiers.
 - To add source label aliases for a topic, edit `scripts/config/source-aliases.json`.
+
+## Canonical Contract
+
+### Agents (12)
+`director` | `researcher` | `investigator` | `analyzer` | `challenger` | `writer` | `critic` | `gap-fill` | `tester` | `security-reviewer` | `publisher` | `cross-analyzer`
+
+### Skills (5)
+`research` | `compare` | `evaluate` | `recommend` | `cross-analyze`
 
 ---
 
-*BrainStorming | Research hub for tools, frameworks, and OSS evaluation | Active | 2026-04-25*
+*BrainStorming | Research pipeline + knowledge base for tools, frameworks, and ideas | Active | 2026-05-12*

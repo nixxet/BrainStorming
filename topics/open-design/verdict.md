@@ -3,6 +3,7 @@ title: "Open Design"
 tags: [research, design-tools, cli-agents, agent-infrastructure]
 topic_slug: open-design
 phase: final
+created: "2026-05-01"
 generated_on: "2026-05-01"
 audience: technical-decision-maker
 workflow: research

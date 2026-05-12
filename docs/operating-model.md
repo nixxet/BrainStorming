@@ -4,8 +4,8 @@
 
 - Topic operator: starts or resumes research workflows and runs local preflight checks.
 - Technical reviewer: confirms the recommendation is actionable and evidence-backed.
-- Security reviewer: reviews security-sensitive topics and public export hygiene.
-- Publisher: approves public or stakeholder-facing output.
+- Security reviewer: reviews security-sensitive topics and distribution export hygiene.
+- Publisher: approves stakeholder-facing output.
 
 ## Publication Gates
 
@@ -20,11 +20,11 @@ A topic is ready for delivery only when:
 - Security review is completed or explicitly not applicable.
 - The verdict includes a clear recommendation, confidence, risks, and next steps.
 
-## Public Release Policy
+## Distribution Policy
 
-`_pipeline/` artifacts are private internal audit data by default. Use `npm run export:public` to produce public-safe output under `dist/public/`.
+`_pipeline/` artifacts are internal audit data. Use `npm run export:public` to produce distribution-safe output under `dist/public/`.
 
-Do not publish raw repository history when private topics, user requests, drafts, or internal evidence files may have existed in the repo.
+Do not publish raw repository history when in-progress topics, user requests, drafts, or internal evidence files may have existed in the repo.
 
 ## Maintenance Cadence
 
