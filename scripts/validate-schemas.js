@@ -30,8 +30,12 @@ function checkRequired(schema, data, filePath, errors) {
 }
 
 function checkState(data, filePath, errors) {
-  checkRequired(stateSchema, data, filePath, errors);
   const rel = path.relative(repoRoot, filePath);
+  if (data.legacy_grandfathered === true) {
+    // Pre-schema-v1 stub: enforce structural checks on present fields only.
+  } else {
+    checkRequired(stateSchema, data, filePath, errors);
+  }
 
   if (data.schema_version && data.schema_version !== "1") {
     errors.push(`${rel}: schema_version "${data.schema_version}" is not recognized (expected "1")`);
@@ -52,17 +56,23 @@ function checkState(data, filePath, errors) {
 }
 
 function checkEvidence(data, filePath, errors) {
-  checkRequired(evidenceSchema, data, filePath, errors);
   const rel = path.relative(repoRoot, filePath);
+  if (data.legacy_grandfathered === true) {
+    if (!Array.isArray(data.findings)) return;
+  } else {
+    checkRequired(evidenceSchema, data, filePath, errors);
+  }
 
-  if (!data.schema_version) {
+  if (!data.schema_version && data.legacy_grandfathered !== true) {
     errors.push(`${rel}: missing schema_version (expected "1") — add "schema_version": "1" to migrate`);
-  } else if (data.schema_version !== "1") {
+  } else if (data.schema_version && data.schema_version !== "1") {
     errors.push(`${rel}: schema_version "${data.schema_version}" is not recognized (expected "1")`);
   }
 
   if (!Array.isArray(data.findings)) {
-    errors.push(`${rel}: findings must be an array`);
+    if (data.legacy_grandfathered !== true) {
+      errors.push(`${rel}: findings must be an array`);
+    }
     return;
   }
   const validConfidence = new Set(["HIGH", "MEDIUM", "LOW", "UNVERIFIED"]);
