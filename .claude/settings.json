@@ -1,5 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "deny": [
+      "Read(topics/_tmp/**)",
+      "Read(topics/*/_pipeline/**)",
+      "Read(dist/public/**)",
+      "Read(citation-cache/**)"
+    ]
+  },
   "hooks": {
     "UserPromptSubmit": [
       {
