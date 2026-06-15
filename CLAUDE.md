@@ -1,82 +1,38 @@
-# BrainStorming — Research & Knowledge Base
+# BrainStorming — Published Topics Mirror
 
-BrainStorming is a standalone research hub for evaluating tools, frameworks, techniques, and ideas.
+This repo is a **read-only mirror** of published research topics from the canonical working tree (`BrainStorming-Priv` at `C:/ClaudeProjects/BrainStorming-Priv`).
 
-Default stance: **vertical-agnostic**. Research topics in their native domain, then explicitly extract reusable value for current and future projects.
+It contains **no research pipeline** — no `.claude/agents/`, no skills, and no `scripts/`. All pipeline work (agents, validation, ingestion, export) happens in BrainStorming-Priv only.
 
-Repo structure: see [`codebase-map.md`](codebase-map.md). Quality bar: see [`docs/quality-standard.md`](docs/quality-standard.md).
+## What lives here
 
-## Running the Pipeline
+| Path | Purpose |
+|------|---------|
+| `topics/{slug}/overview.md` | What the thing is, major concepts, context |
+| `topics/{slug}/notes.md` | Evidence-backed findings with confidence ratings |
+| `topics/{slug}/verdict.md` | Recommendation, risks, alternatives |
+| `index.md` | Active topic registry |
+| `archived-topics.md` | Retired or superseded topics |
+| `dist/public/` | Last machine-readable export snapshot (`index.json` + topic files) |
 
-| Skill | Use When |
-|-------|----------|
-| `/research [topic]` | Full pipeline — landscape, options, key findings |
-| `/quick [topic]` | Fast research — no adversarial challenge, security review, or stress test |
-| `/compare [A] vs [B]` | Side-by-side evaluation |
-| `/evaluate [item]` | Deep single-item evaluation |
-| `/recommend [problem]` | Problem-first — research solutions, rank candidates |
-| `/cross-analyze [theme]` | Cross-topic synthesis — reads existing topics only |
+## How content arrives
 
-## Dispatch Rules
+1. Research runs in **BrainStorming-Priv** via `/research`, `/compare`, `/evaluate`, `/recommend`, or `/cross-analyze`.
+2. Publisher writes sanitized topic files when a run completes.
+3. Maintainer runs `npm run export:public` in Priv and copies `dist/public/` here.
 
-When the user message matches one of these patterns, read `.claude/agents/director.md` and run the matching workflow.
+**Do not** add pipeline agents, skills, or scripts to this repo. If you need to change pipeline behavior, edit BrainStorming-Priv and re-export.
 
-| User Pattern | Workflow | Director Receives |
-| --- | --- | --- |
-| `new topic: <url or name>` | research | Topic: the URL or name |
-| `research <topic>` | research | Topic: the topic text |
-| `quick <topic>` | quick | Topic: quick mode (no Investigator, no Phase 5/6/6.5) |
-| `compare <A> vs <B>` | compare | Comparison: the full text |
-| `evaluate <item>` | evaluate | Evaluate: the item text |
-| `recommend <problem>` | recommend | Problem: the problem text |
-| Bare GitHub/GitLab URL | evaluate | Evaluate: the URL |
-| `cross-analyze <theme>` | cross-analyze | Theme: the theme or keyword |
-| `verify citations [slug\|all]` | verify citations | URL verification |
-| `refresh-stale` | staleness check plus re-research | Staleness check + re-research |
-| `diagnose <topic-slug>` | run diagnose-run.js for a topic and report | Diagnostic: the slug |
+## Topic contract (published files)
 
-**refresh-stale:** Run `npm run check-staleness:report` → present Overdue Topics → user confirms slugs → dispatch as `/research {slug}` with `re_evaluation: true` in state.json.
-
-**cross-analyze:** Use only after 3+ related topics exist. Output goes to `topics/_cross/{theme}/cross-analysis.md`; does not modify individual topic verdicts but may surface invalidation candidates.
-
-## Resuming an Interrupted Pipeline
-
-Re-invoke the same skill for the same topic. The Director reads `_pipeline/state.json` and skips already-completed phases automatically.
-
-If state is corrupt: `npm run validate-pipeline-state:repair -- --topic {slug}`. For diagnostic output: `npm run diagnose-run -- --topic {slug}`.
-
-## Topic Contract
-
-Each completed topic MUST contain:
+Each topic folder includes:
 
 - `overview.md` — frontmatter: `title`, `tags`, `created`, `status`
-- `notes.md` — evidence-backed findings with confidence ratings
+- `notes.md` — findings with confidence ratings and citations
 - `verdict.md` — frontmatter: `title`, `tags`, `created`, `status`, `score`, `verdict`
-- `_pipeline/state.json` — pipeline run record
-- `_pipeline/evidence.json` — source provenance
 
-Local or work-in-progress pipeline artifacts must be sanitized before distribution. Use `npm run export:public` to produce a distribution-safe tree under `dist/public/`.
-
-## Post-Pipeline Security
-
-After every pipeline run, before `git add`:
-
-```bash
-npm run security:secrets
-npm run verify-citations -- --topic {topic-slug}
-trufflehog filesystem topics/{topic-slug}/_pipeline/ --only-verified   # deeper coverage
-```
-
-## Maintenance
-
-Operational scripts live in `scripts/`. Common: `check-staleness.js`, `verify-citations.js`, `diagnose-run.js`, `lint-agents.js`, `prune-citation-cache.js`, `check-hygiene.js`, `regenerate-index.js`. Source-alias config: `scripts/config/source-aliases.json`.
-
-## Canonical Contract
-
-**Agents (12):** `director` | `researcher` | `investigator` | `analyzer` | `challenger` | `writer` | `critic` | `gap-fill` | `tester` | `security-reviewer` | `publisher` | `cross-analyzer`
-
-**Skills (5):** `research` | `compare` | `evaluate` | `recommend` | `cross-analyze`
+Pipeline artifacts (`_pipeline/`, manifests, media digests) stay in the Priv working tree and are git-ignored there.
 
 ---
 
-*BrainStorming | Research pipeline + knowledge base for tools, frameworks, and ideas | Active | 2026-05-15*
+*BrainStorming | Published-topics mirror | Active | 2026-06-15*
