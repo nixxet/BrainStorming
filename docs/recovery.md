@@ -103,7 +103,7 @@ Repair:
 
 Symptoms:
 
-- Gitleaks or TruffleHog reports a secret.
+- Gitleaks or the built-in secret scan (`npm run security:secrets`) reports a secret.
 
 Repair:
 
