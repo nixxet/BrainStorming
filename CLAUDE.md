@@ -35,5 +35,5 @@ Pipeline artifacts (`_pipeline/`, manifests, media digests) stay in the Priv wor
 
 ---
 
-*BrainStorming | Published-topics mirror | Active | 2026-06-15*
 <!-- last-reviewed: 2026-07-01 -->
+*BrainStorming | Published-topics mirror | Active | 2026-06-15*
