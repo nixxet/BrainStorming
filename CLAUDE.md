@@ -33,7 +33,17 @@ Each topic folder includes:
 
 Pipeline artifacts (`_pipeline/`, manifests, media digests) stay in the Priv working tree and are git-ignored there.
 
+## Done looks like
+
+This repo is a mirror, so completion means fidelity to the export rather than judgement about content:
+
+- **Every topic folder carries all three files** (`overview.md`, `notes.md`, `verdict.md`) with the frontmatter the Topic contract above specifies.
+- **`index.md` lists exactly the topic folders present** -- no entry without a folder, no folder without an entry.
+- **`dist/public/` came from `npm run export:public` in Priv**, not from an edit here. If the two diverge, re-export; patching this side makes the mirror the source of truth, which it is not.
+- **No pipeline artifact arrived** -- no `.claude/agents/`, no skills, no `scripts/`, no `_pipeline/`. Their presence means content came in by the wrong path and the export step was skipped.
+
 ---
 
 <!-- last-reviewed: 2026-07-01 -->
 *BrainStorming | Published-topics mirror | Active | 2026-06-15*
+<!-- 2026-09-03: added "Done looks like" (exit criteria) per Anthropic Claude 5 / Fable 5.1 prompting guidance; see ~/.claude/CLAUDE.md -> Completion discipline -->
