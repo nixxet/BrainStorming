@@ -45,5 +45,5 @@ This repo is a mirror, so completion means fidelity to the export rather than ju
 ---
 
 <!-- last-reviewed: 2026-07-01 -->
-*BrainStorming | Published-topics mirror | Active | 2026-09-03*
 <!-- 2026-09-03: added "Done looks like" (exit criteria) per Anthropic Claude 5 / Fable 5.1 prompting guidance; see ~/.claude/CLAUDE.md -> Completion discipline -->
+*BrainStorming | Published-topics mirror | Active | 2026-09-03*
