@@ -200,7 +200,7 @@ sequenceDiagram
     H->>TK: write last-invocation.json
     H-->>D: prompt continues to model
     D->>TK: read + verify + delete
-    note over D: Phase 0 -- guardrail PASS;\nstate.json with\nlegacy_grandfathered: false
+    note over D: Phase 0 -- guardrail PASS,\nstate.json with\nlegacy_grandfathered: false
     par Phase 1 -- parallel spawn
         D->>RE: landscape research
         D->>IN: adversarial deep-dive
