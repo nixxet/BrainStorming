@@ -1,0 +1,11 @@
+{
+  "name": "brainstorming",
+  "displayName": "BrainStorming Research Pipeline",
+  "version": "1.0.0",
+  "description": "Evidence-backed technical research for Claude Code: a fast cited /research mode, plus a multi-agent audited pipeline (research, compare, evaluate, recommend, cross-analyze) with link verification, claim-support checks, and an adversarial challenge before anything is published.",
+  "author": { "name": "nixxet" },
+  "homepage": "https://github.com/nixxet/BrainStorming",
+  "repository": "https://github.com/nixxet/BrainStorming",
+  "license": "MIT",
+  "keywords": ["research", "evaluation", "citations", "multi-agent", "decision-making"]
+}

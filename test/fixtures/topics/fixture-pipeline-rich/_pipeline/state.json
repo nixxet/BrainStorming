@@ -1,0 +1,17 @@
+{
+  "topic_slug": "fixture-pipeline-rich",
+  "topic_name": "Fixture Pipeline Rich Topic",
+  "workflow": "evaluate",
+  "current_date": "2026-04-24",
+  "phases": {
+    "phase_4": {
+      "status": "completed",
+      "verdict": "PASS",
+      "final_score": 8.75
+    }
+  },
+  "run_metrics": {
+    "final_score": 8.75
+  },
+  "errors": []
+}

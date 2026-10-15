@@ -22,7 +22,7 @@ A topic is ready for delivery only when:
 
 ## Distribution Policy
 
-`_pipeline/` artifacts are internal audit data. Use `npm run export:public` to produce distribution-safe output under `dist/public/`.
+`_pipeline/` artifacts are internal audit data and are git-ignored. Only the three topic files (`overview.md`, `notes.md`, `verdict.md`) are meant to be shared.
 
 Do not publish raw repository history when in-progress topics, user requests, drafts, or internal evidence files may have existed in the repo.
 

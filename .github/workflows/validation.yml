@@ -1,4 +1,4 @@
-name: Mirror Check
+name: Validate plugin
 
 on:
   pull_request:
@@ -6,16 +6,26 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
-  structure:
+  validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Verify mirror has no pipeline copy
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - name: Unit and integration tests
+        run: npm test
+      - name: Validators (syntax, topics, schemas, agent lint, settings and hooks)
+        run: npm run validate
+      - name: Secret scan (built-in patterns)
+        run: npm run security:secrets
+      - name: Plugin layout
         run: |
-          test ! -d .claude/agents
-          test ! -d .claude/skills
-          test ! -d scripts
-          test ! -d test
-          test -f index.md
-          test -f CLAUDE.md
+          test -f .claude-plugin/plugin.json
+          test -f .claude-plugin/marketplace.json
+          test -f hooks/hooks.json
+          node -e 'const p=require("./.claude-plugin/plugin.json"),m=require("./.claude-plugin/marketplace.json");if(!m.plugins.some(x=>x.name===p.name&&x.source==="./"))process.exit(1)'

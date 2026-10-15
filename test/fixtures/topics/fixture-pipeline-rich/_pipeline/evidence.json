@@ -1,0 +1,44 @@
+{
+  "schema_version": "1",
+  "topic_slug": "fixture-pipeline-rich",
+  "generated_on": "2026-05-01",
+  "finding_count": 2,
+  "confidence_distribution": { "HIGH": 1, "MEDIUM": 1, "LOW": 0, "UNVERIFIED": 0 },
+  "findings": [
+    {
+      "id": "F1",
+      "title": "Fixture finding one — corroborated by two independent sources",
+      "confidence": "HIGH",
+      "summary": "A fixture claim with multiple independent sources.",
+      "source_count": 2,
+      "source_independence": "independent",
+      "must_survive": true,
+      "appears_in": ["notes", "verdict"],
+      "transferability": "reusable",
+      "invalidation_condition": "Upstream project archives the repository",
+      "confidence_decay": "volatile",
+      "staleness_material": true
+    },
+    {
+      "id": "F2",
+      "title": "Fixture finding two — single source",
+      "confidence": "MEDIUM",
+      "summary": "A fixture claim backed by one source.",
+      "source_count": 1,
+      "source_independence": "single",
+      "must_survive": false,
+      "appears_in": ["notes"],
+      "transferability": "contextual",
+      "invalidation_condition": null,
+      "confidence_decay": "fast",
+      "staleness_material": false
+    }
+  ],
+  "must_carry_caveats": ["Fixture caveat that must survive to publication."],
+  "staleness_summary": {
+    "material_findings": ["F1"],
+    "fastest_material_decay": "volatile",
+    "core_findings": ["F1"],
+    "volatile_findings": ["F1"]
+  }
+}

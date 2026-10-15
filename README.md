@@ -1,42 +1,71 @@
 # BrainStorming
 
-Published research topics on tools, frameworks, libraries, and technical ideas — exported from the canonical [BrainStorming-Priv](https://github.com/) working tree.
+A Claude Code plugin for evidence-backed technical research. Ask about a tool, framework, library, or approach and get either a fast cited answer or a full audited dossier with an explicit recommendation.
 
-This mirror holds **evidence-backed topic writeups** only. The multi-agent research pipeline (agents, skills, validation scripts) lives in BrainStorming-Priv and is intentionally absent here.
+- **Fast by default.** `/brainstorming:research <question>` runs one live-web pass, answers in chat, and checks that every cited link resolves before it finishes.
+- **Audited on request.** Add `--deep` (or use `compare`, `evaluate`, `recommend`) to run a multi-agent pipeline: parallel research, evidence synthesis, drafting, a quality gate, stress testing, and an adversarial challenge before anything is written.
+- **No dead links, no invented sources.** Citations are checked, unsupported claims are flagged, and confidence levels are stated for every finding.
 
-## Topic structure
+## Install
 
-Each topic folder contains:
+Requires Claude Code and Node.js 22 or later.
 
-- `overview.md` — what the thing is, major concepts, sources, and key context
-- `notes.md` — findings, confidence ratings, caveats, and unresolved questions
-- `verdict.md` — recommendation, risks, alternatives, and next steps
+```
+/plugin install brainstorming --marketplace nixxet/BrainStorming
+```
 
-## Repository layout
+On older Claude Code versions, add the marketplace first:
+
+```
+/plugin marketplace add nixxet/BrainStorming
+/plugin install brainstorming@brainstorming
+```
+
+## Commands
+
+| Command | What it does |
+|---|---|
+| `/brainstorming:research <topic>` | Fast cited answer in chat (about 1-2 minutes). Add `--deep` for the full audited pipeline. |
+| `/brainstorming:compare <A> vs <B>` | Side-by-side evaluation with normalized criteria and a "choose A when / choose B when" verdict. |
+| `/brainstorming:evaluate <item>` | Deep evaluation of one product, tool, or approach: claims versus evidence, strengths, weaknesses, verdict. |
+| `/brainstorming:recommend <problem>` | Problem-first: researches candidate solutions, ranks them, and recommends one with a runner-up. |
+| `/brainstorming:cross-analyze <theme>` | Reads your existing topics (no new web research) and reports recurring patterns and risks. |
+
+The full pipeline uses several Opus and Sonnet subagents, so a deep run costs noticeably more than a fast one. The default per-run budget cap is in [`config.json`](config.json); it is a tracking signal, not a hard stop.
+
+## Where output goes
+
+Research is written to the directory you run Claude Code in (your workspace), not into the plugin:
 
 ```text
-BrainStorming/
-  topics/
-    {topic-slug}/
-      overview.md
-      notes.md
-      verdict.md
-  archived-topics.md     Retired or superseded topic registry
-  index.md               Active topic registry
-  dist/public/           Machine-readable export snapshot (index.json + topics)
+your-workspace/
+  topics/{topic-slug}/
+    overview.md     what it is, key concepts, sources
+    notes.md        findings with confidence ratings and citations
+    verdict.md      recommendation, risks, alternatives, next steps
+    _pipeline/      run state and audit artifacts (add to .gitignore)
+  index.md          active topics with one-line verdicts
+  archived-topics.md
 ```
 
-## Updating this mirror
+To point the scripts at a different workspace, set `BRAINSTORMING_WORKSPACE`. To override settings such as the budget cap, put a `config.json` in your workspace.
 
-From BrainStorming-Priv:
+## Optional: semantic claim check
 
-```bash
-npm run export:public
-# Copy dist/public/ contents into this repo, then commit.
-```
+The deep pipeline always checks that each cited page is related to the claim it supports. If `GEMINI_API_KEY` is set in your environment, it also asks a Gemini model whether ambiguous sources actually support or contradict the claim. Without a key, those cases are reported as inconclusive and never fail the run.
 
-Do not add `.claude/agents/`, skills, or `scripts/` here — maintain pipeline code in Priv only.
+## Examples
+
+[`archived-topics.md`](archived-topics.md) lists three example outputs from earlier versions of the pipeline (`topics/markitdown/`, `topics/markitdown-v1/`, `topics/open-design/`). They show the file structure and writing style; they predate some of the current citation checks.
+
+## How it works
+
+See [`diagram.md`](diagram.md) for the phase-by-phase architecture, [`docs/quality-standard.md`](docs/quality-standard.md) for the quality bar, and [`docs/reliability/FAILURE_MODES.md`](docs/reliability/FAILURE_MODES.md) for the failure modes the gates exist to catch.
+
+## Development
+
+See [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE).

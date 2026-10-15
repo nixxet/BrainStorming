@@ -22,8 +22,8 @@ Reusable pattern: Unified API abstraction over heterogeneous document libraries,
 ## Key Concepts
 
 - **Wrapper architecture:** Unified Python interface to existing third-party converters, not a novel processing engine
-- **Format support vs. format quality:** MarkItDown technically supports 29+ formats; real-world success varies dramatically (Office 65–85%, PDFs 30–40%, mixed-format sets 47.3%)
-- **Structure preservation:** Critical failure on PDFs—heading hierarchy 0.000/1.0, table extraction 0.273/1.0, meaning document structure is completely flattened
+- **Format support vs. format quality:** MarkItDown technically supports 29+ formats; real-world success varies dramatically (Office 65-85%, PDFs 30-40%, mixed-format sets 47.3%)
+- **Structure preservation:** Critical failure on PDFs--heading hierarchy 0.000/1.0, table extraction 0.273/1.0, meaning document structure is completely flattened
 - **Fallback requirement:** Production LLM pipelines require secondary tools (Docling, Marker) to handle ~50% of typical document loads
 - **Speed-accuracy trade-off:** Fast processing (0.114 sec/page) but output quality insufficient for structure-dependent applications
 - **Encoding stability:** Windows systems vulnerable to UnicodeEncodeError crashes on production document sets; reproducible issue across versions
@@ -34,15 +34,15 @@ LLM preprocessing pipelines use MarkItDown as an initial document ingestion laye
 
 ## Key Numbers / Stats
 
-- **~119,300 GitHub stars** (live check 2026-05-02; previously 87,000 by April 2026, 25,000 in first two weeks of launch) — HIGH confidence. [MarkItDown GitHub](https://github.com/microsoft/markitdown), [Yage.ai survey](https://yage.ai/share/markitdown-survey-en-20260412.html)
-- **0.589 / 1.0 overall score** on OpenDataLoader benchmark (12 PDF-to-Markdown engines, standardized test set) versus Docling's 0.882 — HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
-- **0.000 / 1.0 heading hierarchy preservation** on PDFs (all text flattened to single level, no structural distinction) — HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
-- **0.273 / 1.0 table fidelity** on PDFs (cells extracted as sequential text, row-column relationships destroyed) — HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
-- **65–85% success rate** on Office documents (DOCX, PPTX, XLSX) — MEDIUM confidence. [DEV.to benchmark](https://dev.to/nhirschfeld/i-benchmarked-4-python-text-extraction-libraries-2025-4e7j)
-- **47.3% first-pass success** on mixed-format real-world dataset (120 files: DOCX, PPTX, HTML, CSV) — MEDIUM confidence. [DEV.to benchmark](https://dev.to/nhirschfeld/i-benchmarked-4-python-text-extraction-libraries-2025-4e7j)
-- **0.114 seconds/page processing speed** versus Docling's 0.45–6.28 seconds/page — HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
-- **Docling 97.9% cell-level table accuracy** on real-world sustainability reports (5 documents, 3–32 tables) — HIGH confidence. [PDF Data Extraction Benchmark 2025](https://procycons.com/en/blogs/pdf-data-extraction-benchmark/)
-- **~71MB installation footprint** (base + optional dependencies) versus Docling 1GB+ — HIGH confidence. [ChatForest comparison](https://chatforest.com/guides/best-pdf-document-processing-mcp-servers/)
+- **~119,300 GitHub stars** (live check 2026-05-02; previously 87,000 by April 2026, 25,000 in first two weeks of launch) -- HIGH confidence. [MarkItDown GitHub](https://github.com/microsoft/markitdown), [Yage.ai survey](https://yage.ai/share/markitdown-survey-en-20260412.html)
+- **0.589 / 1.0 overall score** on OpenDataLoader benchmark (12 PDF-to-Markdown engines, standardized test set) versus Docling's 0.882 -- HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
+- **0.000 / 1.0 heading hierarchy preservation** on PDFs (all text flattened to single level, no structural distinction) -- HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
+- **0.273 / 1.0 table fidelity** on PDFs (cells extracted as sequential text, row-column relationships destroyed) -- HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
+- **65-85% success rate** on Office documents (DOCX, PPTX, XLSX) -- MEDIUM confidence. [DEV.to benchmark](https://dev.to/nhirschfeld/i-benchmarked-4-python-text-extraction-libraries-2025-4e7j)
+- **47.3% first-pass success** on mixed-format real-world dataset (120 files: DOCX, PPTX, HTML, CSV) -- MEDIUM confidence. [DEV.to benchmark](https://dev.to/nhirschfeld/i-benchmarked-4-python-text-extraction-libraries-2025-4e7j)
+- **0.114 seconds/page processing speed** versus Docling's 0.45-6.28 seconds/page -- HIGH confidence. [OpenDataLoader Benchmark](https://opendataloader.org/docs/benchmark)
+- **Docling 97.9% cell-level table accuracy** on real-world sustainability reports (5 documents, 3-32 tables) -- HIGH confidence. [PDF Data Extraction Benchmark 2025](https://procycons.com/en/blogs/pdf-data-extraction-benchmark/)
+- **~71MB installation footprint** (base + optional dependencies) versus Docling 1GB+ -- HIGH confidence. [ChatForest comparison](https://chatforest.com/guides/best-pdf-document-processing-mcp-servers/)
 
 ## Links
 

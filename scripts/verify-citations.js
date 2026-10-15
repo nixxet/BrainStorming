@@ -1,0 +1,644 @@
+#!/usr/bin/env node
+'use strict';
+/**
+ * verify-citations.js — Deterministic URL verification for published topic files.
+ * Operates on published files only: topics/{slug}/overview.md, notes.md, verdict.md
+ * Does NOT scan _pipeline/ draft files.
+ *
+ * Usage:
+ *   node scripts/verify-citations.js --topic {slug}
+ *   node scripts/verify-citations.js --all
+ *   node scripts/verify-citations.js --help
+ *
+ * Exit codes:
+ *   0 - all URLs OK, REDIRECT_OK, HTTP_FORBIDDEN, or WARN_PLACEHOLDER
+ *   1 - any failed URL class found
+ */
+
+const fs = require('fs');
+const path = require('path');
+const https = require('node:https');
+const http = require('node:http');
+const {
+  CITATION_COUNT_KEYS,
+  classifyHttpStatus,
+  classifyRequestError,
+  citationCountKey,
+  isFailedCitationStatus,
+} = require('./lib/citation-status');
+const { isValidTopicSlug } = require('./lib/safe-paths');
+// SSRF-guarded fetch primitives now live in lib/safe-fetch.js (PRD Fix #2 Part 2,
+// 2026-06-07) so the semantic claim-support gate shares the exact hardened path.
+const {
+  TIMEOUT_MS,
+  MAX_REDIRECTS,
+  MAX_BODY_BYTES,
+  assertSafeUrl,
+  fetchBody,
+} = require('./lib/safe-fetch');
+
+const { WORKSPACE_ROOT: ROOT } = require("./lib/workspace");
+const TOPICS_DIR = path.join(ROOT, 'topics');
+const META_DIR   = path.join(TOPICS_DIR, '_meta');
+const CACHE_PATH = path.join(META_DIR, 'citation-cache.json');
+
+const SCOPE_BOUNDARY = `This script verifies that URLs resolve. It does not verify that cited pages support the claims made. Availability validation and semantic claim validation are different problems.`;
+
+const PLACEHOLDER_PATTERNS = /example\.com|TODO|TBD|PLACEHOLDER/i;
+// M1 fix (2026-06-06): allow one level of balanced parens inside the URL so links
+// like [Foo](https://en.wikipedia.org/wiki/Foo_(disambiguation)) are captured whole
+// instead of truncated at the first ')', which produced false DEAD/UNKNOWN results.
+const URL_REGEX = /\[([^\]]+)\]\((https?:\/\/[^\s)]*(?:\([^\s)]*\)[^\s)]*)*)\)/g;
+const PUBLISHED_FILES = ['overview.md', 'notes.md', 'verdict.md'];
+const RAW_GH_RETRY_DELAY_MS = 1500;
+
+// ── Args ─────────────────────────────────────────────────────────────────────
+
+const args = process.argv.slice(2);
+
+if (args.includes('--help') || args.length === 0) {
+  console.log(`
+verify-citations.js — URL verification for published BrainStorming topics
+
+${SCOPE_BOUNDARY}
+
+Usage:
+  node scripts/verify-citations.js --topic {slug}              Verify one topic (URL reachability)
+  node scripts/verify-citations.js --topic {slug} --claim-check  Verify + check claim text in page body
+  node scripts/verify-citations.js --all                        Verify all topics + write aggregate report
+  node scripts/verify-citations.js --all --claim-check          Verify + claim-check all topics
+  node scripts/verify-citations.js --all --concurrency 5 --cache --cache-ttl-days 7
+                                                               Verify with bounded concurrency and TTL cache
+
+Cache is bypassed by omitting --cache. Cached entries expire according to --cache-ttl-days.
+
+--claim-check: For each reachable URL, fetches the page body (up to 50KB) and checks whether
+significant terms from the citation's link text appear in the content. Reports CLAIM-PRESENT,
+CLAIM-ABSENT, or CLAIM-UNVERIFIABLE (when link text is too short to verify meaningfully).
+This is text-match verification — not semantic verification. A CLAIM-ABSENT result means
+the specific phrasing used in the link text was not found; it does not prove the claim is false.
+
+Exit codes: 0 = all pass/warn  |  1 = any failed URL class or CLAIM-ABSENT
+`);
+  process.exit(0);
+}
+
+const topicArg      = args.includes('--topic') ? args[args.indexOf('--topic') + 1] : null;
+const allMode       = args.includes('--all');
+const claimCheckMode = args.includes('--claim-check');
+const cacheMode = args.includes('--cache');
+const concurrencyArg = args.includes('--concurrency') ? Number(args[args.indexOf('--concurrency') + 1]) : 1;
+const concurrency = Number.isInteger(concurrencyArg) && concurrencyArg > 0 ? concurrencyArg : 1;
+const cacheTtlDaysArg = args.includes('--cache-ttl-days') ? Number(args[args.indexOf('--cache-ttl-days') + 1]) : 1;
+const cacheTtlDays = Number.isFinite(cacheTtlDaysArg) && cacheTtlDaysArg > 0 ? cacheTtlDaysArg : 1;
+
+if (!topicArg && !allMode) {
+  console.error('Error: provide --topic {slug} or --all');
+  process.exit(1);
+}
+
+// H7 fix (2026-06-06): reject an invalid/traversing --topic slug at parse time.
+// Without this, "--topic ../../../evil" builds path.join(TOPICS_DIR, slug) and then
+// mkdirSync + writeFileSync outside topics/ (out-of-tree dir-create + write).
+if (topicArg !== null && !isValidTopicSlug(topicArg)) {
+  console.error(`Error: invalid topic slug "${topicArg}". Expected kebab-case (lowercase letters, digits, hyphens).`);
+  process.exit(1);
+}
+
+function readCache() {
+  if (!cacheMode || !fs.existsSync(CACHE_PATH)) return {};
+  try {
+    return JSON.parse(fs.readFileSync(CACHE_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
+}
+
+function writeCache(cache) {
+  if (!cacheMode) return;
+  fs.mkdirSync(META_DIR, { recursive: true });
+  fs.writeFileSync(CACHE_PATH, JSON.stringify(cache, null, 2), 'utf8');
+}
+
+function cacheEntryFromResult(url, today, result) {
+  const normalizedResult = {
+    ...result,
+    url: result.url || url,
+    final_url: result.final_url || url,
+  };
+
+  return {
+    url,
+    checked_on: today,
+    final_url: normalizedResult.final_url,
+    status: normalizedResult.status,
+    http_code: normalizedResult.http_code ?? null,
+    error_class: citationCountKey(normalizedResult.status),
+    result: normalizedResult,
+  };
+}
+
+function cachedResultFromEntry(entry, today) {
+  if (!isCacheFresh(entry, today)) return null;
+  if (entry.result) return entry.result;
+  if (!entry.status || !entry.url) return null;
+
+  return {
+    url: entry.url,
+    source_file: '',
+    final_url: entry.final_url || entry.url,
+    http_code: entry.http_code ?? null,
+    method_used: entry.method_used ?? null,
+    status: entry.status,
+    note: entry.note,
+  };
+}
+
+async function mapLimit(items, limit, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+const citationCache = readCache();
+
+function isCacheFresh(entry, today) {
+  if (!entry?.checked_on) return false;
+  const checked = new Date(`${entry.checked_on}T00:00:00Z`);
+  const now = new Date(`${today}T00:00:00Z`);
+  if (Number.isNaN(checked.getTime()) || Number.isNaN(now.getTime())) return false;
+  const ageDays = (now - checked) / 86400000;
+  // L25 fix (2026-06-07): clamp negative age (clock skew) to 0 for freshness check
+  const clampedAge = Math.max(0, ageDays);
+  return clampedAge < cacheTtlDays;
+}
+
+// ── HTTP checking ─────────────────────────────────────────────────────────────
+
+/**
+ * Make one HTTP request and resolve with { statusCode, finalUrl, redirectCount }.
+ */
+function makeRequest(url, method, redirectCount = 0) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const lib = parsed.protocol === 'https:' ? https : http;
+
+    const options = {
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      method,
+      headers: {
+        'User-Agent': 'BrainStorming-CitationChecker/1.0',
+      },
+      timeout: TIMEOUT_MS,
+    };
+
+    const req = lib.request(options, (res) => {
+      // Consume response body to free socket
+      res.resume();
+
+      const code = res.statusCode;
+
+      // Handle redirects
+      if ([301, 302, 303, 307, 308].includes(code) && res.headers.location) {
+        if (redirectCount >= MAX_REDIRECTS) {
+          return resolve({ statusCode: code, finalUrl: url, redirectCount, maxRedirectsExceeded: true });
+        }
+        const nextUrl = new URL(res.headers.location, url).toString();
+        return resolve({ redirect: true, nextUrl, redirectCount: redirectCount + 1 });
+      }
+
+      resolve({ statusCode: code, finalUrl: url, redirectCount });
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(new Error('TIMEOUT'));
+    });
+
+    req.on('error', (err) => {
+      reject(err);
+    });
+
+    req.end();
+  });
+}
+
+// isPrivateIPv4 / isPrivateIPv6 / assertSafeUrl moved to lib/safe-fetch.js
+// (PRD Fix #2 Part 2, 2026-06-07); assertSafeUrl is imported at the top.
+
+/**
+ * Follow redirects up to MAX_REDIRECTS, return final { statusCode, finalUrl }.
+ */
+async function fetchFollowRedirects(url, method) {
+  let current = url;
+  let hops = 0;
+
+  while (hops <= MAX_REDIRECTS) {
+    const safety = await assertSafeUrl(current);
+    if (!safety.safe) {
+      return { statusCode: null, finalUrl: current, error: safety.status, note: safety.note };
+    }
+
+    const result = await makeRequest(current, method, hops);
+
+    if (result.maxRedirectsExceeded) {
+      return { statusCode: result.statusCode, finalUrl: current, error: 'REDIRECT_BLOCKED', note: 'max redirects exceeded' };
+    }
+
+    if (result.redirect) {
+      const redirectSafety = await assertSafeUrl(result.nextUrl);
+      if (!redirectSafety.safe) {
+        return {
+          statusCode: null,
+          finalUrl: result.nextUrl,
+          error: 'REDIRECT_BLOCKED',
+          note: `redirect target ${redirectSafety.status}: ${redirectSafety.note}`,
+        };
+      }
+      current = result.nextUrl;
+      hops = result.redirectCount;
+      continue;
+    }
+
+    return { statusCode: result.statusCode, finalUrl: result.finalUrl, redirects: hops };
+  }
+
+  return { statusCode: null, finalUrl: current, error: 'REDIRECT_BLOCKED', note: 'max redirects exceeded' };
+}
+
+/**
+ * Classify URL and check it. Returns result object.
+ */
+async function checkUrl(url, sourceFile) {
+  const base = { url, source_file: sourceFile, final_url: url, http_code: null, method_used: null };
+
+  // Placeholder check
+  if (PLACEHOLDER_PATTERNS.test(url)) {
+    return { ...base, status: 'WARN_PLACEHOLDER' };
+  }
+
+  const isRawGitHub = url.includes('raw.githubusercontent.com');
+
+  const attempt = async (method) => {
+    try {
+      const result = await fetchFollowRedirects(url, method);
+
+      if (['DNS_ERROR', 'BLOCKED_PRIVATE_NETWORK', 'BLOCKED_UNSUPPORTED_PROTOCOL', 'REDIRECT_BLOCKED', 'UNKNOWN_ERROR'].includes(result.error)) {
+        return { ...base, status: result.error, method_used: method, final_url: result.finalUrl, note: result.note };
+      }
+
+      const code = result.statusCode;
+      const hops = result.redirects ?? 0;
+      const status = classifyHttpStatus(code, hops);
+
+      return { ...base, status, http_code: code, final_url: result.finalUrl, method_used: method };
+    } catch (err) {
+      const status = classifyRequestError(err);
+      return { ...base, status, method_used: method, note: err.code || err.message };
+    }
+  };
+
+  // Try HEAD first
+  let result = await attempt('HEAD');
+
+  // If HEAD returns 405, or connection error: retry with GET
+  if (result.http_code === 405 || (result.status === 'UNKNOWN_ERROR' && result.http_code === null)) {
+    result = await attempt('GET');
+  }
+
+  // Raw GitHub: retry once after delay on any failure
+  if (isRawGitHub && isFailedCitationStatus(result.status)) {
+    await new Promise(r => setTimeout(r, RAW_GH_RETRY_DELAY_MS));
+    result = await attempt('GET');
+  }
+
+  return result;
+}
+
+// ── Claim checking (--claim-check mode) ──────────────────────────────────────
+
+// MAX_BODY_BYTES moved to lib/safe-fetch.js (imported above) alongside fetchBody.
+
+// STOP_WORDS / extractSignificantTerms moved to lib/claim-support.js (PRD Fix #2,
+// 2026-06-07) so the semantic gate and this URL-reachability checker share one
+// definition instead of drifting copies.
+const { STOP_WORDS, extractSignificantTerms } = require('./lib/claim-support');
+
+// fetchBody moved to lib/safe-fetch.js (imported above) — same SSRF-guarded path
+// is now shared with the semantic claim-support gate.
+
+/**
+ * Strip HTML tags and collapse whitespace.
+ */
+function stripHtml(html) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+// extractSignificantTerms now imported from lib/claim-support.js (see top).
+
+/**
+ * Check whether claim terms appear in the fetched page body.
+ * Returns: 'CLAIM-PRESENT' | 'CLAIM-ABSENT' | 'CLAIM-UNVERIFIABLE'
+ *
+ * CLAIM-PRESENT:      ≥60% of significant terms found in body
+ * CLAIM-ABSENT:       <40% of significant terms found
+ * CLAIM-UNVERIFIABLE: <3 significant terms (link text too short)
+ */
+function checkClaimInBody(linkText, bodyText) {
+  const terms = extractSignificantTerms(linkText);
+  if (terms.length < 3) return 'CLAIM-UNVERIFIABLE';
+
+  const body = stripHtml(bodyText);
+  const found = terms.filter(t => body.includes(t)).length;
+  const ratio = found / terms.length;
+
+  if (ratio >= 0.6) return 'CLAIM-PRESENT';
+  if (ratio < 0.4) return 'CLAIM-ABSENT';
+  return 'CLAIM-UNVERIFIABLE'; // 40–59% is ambiguous
+}
+
+// ── Topic processing ──────────────────────────────────────────────────────────
+
+function extractUrls(content, fileName) {
+  const urls = [];
+  let match;
+  URL_REGEX.lastIndex = 0;
+  while ((match = URL_REGEX.exec(content)) !== null) {
+    urls.push({ url: match[2], linkText: match[1], sourceFile: fileName });
+  }
+  return urls;
+}
+
+async function verifyTopic(slug) {
+  const topicDir = path.join(TOPICS_DIR, slug);
+  const today = new Date().toISOString().slice(0, 10);
+  const cacheStats = {
+    cache_enabled: cacheMode && !claimCheckMode,
+    cache_ttl_days: cacheTtlDays,
+    cache_hits: 0,
+    cache_misses: 0,
+  };
+
+  // Guard: check topic has published files
+  const existingFiles = PUBLISHED_FILES.filter(f => fs.existsSync(path.join(topicDir, f)));
+  if (existingFiles.length === 0) {
+    console.error(`Topic ${slug} has no published files — run after the pipeline completes.`);
+    return null;
+  }
+
+  // Extract all URLs
+  const allUrls = [];
+  for (const fileName of existingFiles) {
+    const content = fs.readFileSync(path.join(topicDir, fileName), 'utf8');
+    allUrls.push(...extractUrls(content, fileName));
+  }
+
+  if (allUrls.length === 0) {
+    console.log(`[${slug}] No URLs found in published files.`);
+    return buildReport(slug, today, [], cacheStats);
+  }
+
+  console.log(`[${slug}] Checking ${allUrls.length} URLs...`);
+
+  // Deduplicate URLs for checking (but keep all source references)
+  const uniqueUrls = [...new Set(allUrls.map(u => u.url))];
+  const checkResults = new Map();
+
+  await mapLimit(uniqueUrls, concurrency, async (url) => {
+    const cacheEntry = citationCache[url];
+    const cached = cacheStats.cache_enabled ? cachedResultFromEntry(cacheEntry, today) : null;
+    if (cached) cacheStats.cache_hits += 1;
+    else if (cacheStats.cache_enabled) cacheStats.cache_misses += 1;
+    const result = cached || await checkUrl(url, '');
+    if (!cached && cacheStats.cache_enabled) {
+      citationCache[url] = cacheEntryFromResult(url, today, result);
+    }
+    checkResults.set(url, result);
+    // L13 fix (2026-06-07): emit complete per-URL line with one console.log to avoid interleaving
+    const line = `  ${url.slice(0, 80)}... ${cached ? 'CACHE_' : ''}${result.status}${result.http_code ? ` (${result.http_code})` : ''}`;
+    console.log(line);
+  });
+
+  // Optional: claim-check reachable URLs
+  const claimResults = new Map(); // url -> { claimVerdict, linkText }
+  if (claimCheckMode) {
+    console.log(`[${slug}] Claim-checking reachable URLs...`);
+    // Build a map of url -> representative link text (first occurrence wins)
+    const urlToLinkText = new Map();
+    for (const { url, linkText } of allUrls) {
+      if (!urlToLinkText.has(url)) urlToLinkText.set(url, linkText);
+    }
+
+    for (const url of uniqueUrls) {
+      const r = checkResults.get(url);
+      if (!['OK', 'REDIRECT_OK'].includes(r.status)) continue;
+
+      const linkText = urlToLinkText.get(url) ?? '';
+      process.stdout.write(`  [claim] ${url.slice(0, 70)}... `);
+      const bodyResult = await fetchBody(r.final_url ?? url);
+      if (bodyResult.error) {
+        claimResults.set(url, { claimVerdict: 'CLAIM-FETCH-ERROR', linkText, error: bodyResult.error });
+        console.log(`CLAIM-FETCH-ERROR (${bodyResult.error})`);
+      } else {
+        const verdict = checkClaimInBody(linkText, bodyResult.text);
+        claimResults.set(url, { claimVerdict: verdict, linkText });
+        console.log(verdict);
+      }
+    }
+  }
+
+  // Build per-URL results with correct source files
+  const results = allUrls.map(({ url, sourceFile, linkText }) => {
+    const r = checkResults.get(url);
+    const claim = claimResults.get(url);
+    return {
+      ...r,
+      source_file: sourceFile,
+      link_text: linkText,
+      ...(claim ? { claim_verdict: claim.claimVerdict } : {}),
+    };
+  });
+
+  return buildReport(slug, today, results, cacheStats);
+}
+
+function buildReport(slug, date, results, cacheStats = {}) {
+  const counts = Object.fromEntries(CITATION_COUNT_KEYS.map(key => [key, 0]));
+  for (const r of results) {
+    counts[citationCountKey(r.status)] += 1;
+  }
+
+  // Claim-check counts (only populated when --claim-check was used)
+  const claimCounts = {
+    claim_present: results.filter(r => r.claim_verdict === 'CLAIM-PRESENT').length,
+    claim_absent: results.filter(r => r.claim_verdict === 'CLAIM-ABSENT').length,
+    claim_unverifiable: results.filter(r => r.claim_verdict === 'CLAIM-UNVERIFIABLE').length,
+    claim_fetch_error: results.filter(r => r.claim_verdict === 'CLAIM-FETCH-ERROR').length,
+  };
+
+  return {
+    topic_slug: slug,
+    checked_on: date,
+    total_urls: results.length,
+    ...cacheStats,
+    ...counts,
+    ...(claimCheckMode ? claimCounts : {}),
+    results,
+  };
+}
+
+function printReport(report) {
+  const { topic_slug: slug, checked_on, total_urls } = report;
+  console.log(`\n# Citation Check: ${slug} — ${checked_on}`);
+  console.log(`\n${SCOPE_BOUNDARY}\n`);
+  console.log(`Total: ${total_urls} | OK: ${report.ok} | Redirect OK: ${report.redirect_ok} | Dead: ${report.dead} | Timeout: ${report.timeout} | DNS: ${report.dns_error} | TLS: ${report.tls_error} | Forbidden: ${report.http_forbidden} | Server Error: ${report.http_server_error} | Redirect Blocked: ${report.redirect_blocked} | Private Blocked: ${report.private_network_blocked} | Unsupported: ${report.unsupported_protocol} | Unknown: ${report.unknown_error} | Placeholder: ${report.warn_placeholder}`);
+
+  const failed = report.results.filter(r => isFailedCitationStatus(r.status));
+  if (failed.length > 0) {
+    console.log(`\n## URLs Requiring Action`);
+    for (const r of failed) {
+      const code = r.http_code ? ` (${r.http_code})` : '';
+      console.log(`- [${r.source_file}] ${r.status}${code}: ${r.url}`);
+    }
+  }
+
+  if (claimCheckMode) {
+    const absent = report.results.filter(r => r.claim_verdict === 'CLAIM-ABSENT');
+    const present = report.results.filter(r => r.claim_verdict === 'CLAIM-PRESENT');
+    const unverifiable = report.results.filter(r => r.claim_verdict === 'CLAIM-UNVERIFIABLE');
+    const fetchErr = report.results.filter(r => r.claim_verdict === 'CLAIM-FETCH-ERROR');
+
+    console.log(`\n## Claim Check Results`);
+    console.log(`Present: ${present.length} | Absent: ${absent.length} | Unverifiable: ${unverifiable.length} | Fetch Error: ${fetchErr.length}`);
+    console.log(`Note: CLAIM-ABSENT means link text terms not found in page body — verify manually. Does not prove the claim is false.`);
+
+    if (absent.length > 0) {
+      console.log(`\n### CLAIM-ABSENT (review these)`);
+      for (const r of absent) {
+        console.log(`- [${r.source_file}] "${r.link_text?.slice(0, 80)}"`);
+        console.log(`  URL: ${r.url}`);
+      }
+    }
+  }
+}
+
+function hasFailed(report) {
+  return report.results.some(r =>
+    isFailedCitationStatus(r.status) ||
+    (claimCheckMode && r.claim_verdict === 'CLAIM-ABSENT')
+  );
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+async function main() {
+  fs.mkdirSync(META_DIR, { recursive: true });
+  const today = new Date().toISOString().slice(0, 10);
+
+  if (allMode) {
+    const slugs = fs.readdirSync(TOPICS_DIR)
+      .filter(name => {
+        if (name.startsWith('_')) return false;
+        return fs.statSync(path.join(TOPICS_DIR, name)).isDirectory();
+      });
+
+    const reports = [];
+    let anyFailed = false;
+
+    for (const slug of slugs) {
+      const report = await verifyTopic(slug);
+      if (!report) continue;
+      reports.push(report);
+
+      // Save per-topic JSON
+      const pipelineDir = path.join(TOPICS_DIR, slug, '_pipeline');
+      fs.mkdirSync(pipelineDir, { recursive: true });
+      const jsonPath = path.join(pipelineDir, `citation-check-${today}.json`);
+      fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
+
+      if (hasFailed(report)) anyFailed = true;
+    }
+
+    // Write aggregate markdown report
+    const aggLines = [];
+    aggLines.push(`---`);
+    aggLines.push(`title: Citation Check — All Topics`);
+    aggLines.push(`created: ${today}`);
+    aggLines.push(`tags: [meta, citations]`);
+    aggLines.push(`---`);
+    aggLines.push(``);
+    aggLines.push(`# Citation Check: All Topics — ${today}`);
+    aggLines.push(``);
+    aggLines.push(`> ${SCOPE_BOUNDARY}`);
+    aggLines.push(``);
+    aggLines.push(`| Topic | Total | OK | Redirect | Dead | Timeout | DNS | TLS | Forbidden | Server | Redirect Blocked | Private Blocked | Unsupported | Unknown | Placeholder |`);
+    aggLines.push(`|-------|-------|----|----------|------|---------|-----|-----|-----------|--------|------------------|-----------------|-------------|---------|-------------|`);
+    for (const r of reports) {
+      aggLines.push(`| ${r.topic_slug} | ${r.total_urls} | ${r.ok} | ${r.redirect_ok} | ${r.dead} | ${r.timeout} | ${r.dns_error} | ${r.tls_error} | ${r.http_forbidden} | ${r.http_server_error} | ${r.redirect_blocked} | ${r.private_network_blocked} | ${r.unsupported_protocol} | ${r.unknown_error} | ${r.warn_placeholder} |`);
+    }
+    aggLines.push(``);
+
+    const failedTopics = reports.filter(hasFailed);
+    if (failedTopics.length > 0) {
+      aggLines.push(`## Topics With Failed URLs`);
+      aggLines.push(``);
+      for (const r of failedTopics) {
+        aggLines.push(`### ${r.topic_slug}`);
+        for (const res of r.results.filter(x => isFailedCitationStatus(x.status))) {
+          const code = res.http_code ? ` (${res.http_code})` : '';
+          aggLines.push(`- [${res.source_file}] ${res.status}${code}: ${res.url}`);
+        }
+        aggLines.push(``);
+      }
+    }
+
+    const aggPath = path.join(META_DIR, `citation-check-${today}.md`);
+    fs.writeFileSync(aggPath, aggLines.join('\n'), 'utf8');
+    writeCache(citationCache);
+    console.log(`\nAggregate report written: ${aggPath}`);
+
+    process.exit(anyFailed ? 1 : 0);
+
+  } else {
+    // Single topic mode
+    const report = await verifyTopic(topicArg);
+    if (!report) {
+      process.exit(1);
+    }
+
+    printReport(report);
+
+    // Save JSON
+    const pipelineDir = path.join(TOPICS_DIR, topicArg, '_pipeline');
+    fs.mkdirSync(pipelineDir, { recursive: true });
+    const jsonPath = path.join(pipelineDir, `citation-check-${today}.json`);
+    fs.writeFileSync(jsonPath, JSON.stringify(report, null, 2), 'utf8');
+    writeCache(citationCache);
+    console.log(`\nJSON results: ${jsonPath}`);
+
+    process.exit(hasFailed(report) ? 1 : 0);
+  }
+}
+
+main().catch(err => {
+  console.error('Unexpected error:', err);
+  process.exit(1);
+});

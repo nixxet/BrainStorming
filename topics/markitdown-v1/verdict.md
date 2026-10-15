@@ -1,17 +1,17 @@
 ---
-title: MarkItDown — Verdict
+title: MarkItDown -- Verdict
 tags: [verdict, recommendation]
 created: 2026-04-26
 status: complete
 ---
 
-> *Note: Citations labeled `(internal)` refer to pipeline analysis artifacts — benchmarks, synthesis documents, and stress tests — stored in `_pipeline/`, which is excluded from distribution by design.*
+> *Note: Citations labeled `(internal)` refer to pipeline analysis artifacts -- benchmarks, synthesis documents, and stress tests -- stored in `_pipeline/`, which is excluded from distribution by design.*
 
-# MarkItDown — Verdict
+# MarkItDown -- Verdict
 
 ## Recommendation
 
-**Recommendation:** MarkItDown is a lightweight, fast text extractor for simple, trusted English-language documents in LLM preprocessing pipelines—with explicit constraints, mandatory security patching, and production hardening required.
+**Recommendation:** MarkItDown is a lightweight, fast text extractor for simple, trusted English-language documents in LLM preprocessing pipelines--with explicit constraints, mandatory security patching, and production hardening required.
 
 MarkItDown is fit-for-purpose within its narrow design scope: English-language, simple internal documents (basic PDFs, plain office files) where speed and token efficiency matter. The 100x performance advantage over Docling is genuine and benchmarked [Deep-Dive Counter 5]. The 90% token savings vs HTML is a real strength for LLM consumption [Multiple independent sources].
 
@@ -67,17 +67,17 @@ MarkItDown is **not** suitable for:
 
 **Future facts that would change the recommendation:**
 
-1. **Resolved dependency verification becomes routine** — If downstream installs consistently resolve `pdfminer.six>=20251230` and `mammoth>=1.11.0` without overrides or stale lockfiles, the security caveat drops from blocking to standard vulnerability-scanning hygiene. **Monitoring:** Check GitHub releases and package metadata monthly.
+1. **Resolved dependency verification becomes routine** -- If downstream installs consistently resolve `pdfminer.six>=20251230` and `mammoth>=1.11.0` without overrides or stale lockfiles, the security caveat drops from blocking to standard vulnerability-scanning hygiene. **Monitoring:** Check GitHub releases and package metadata monthly.
 
-2. **Table extraction algorithm changes to row-column preservation** — Removes core disqualifier for structured data extraction. Use case expands significantly. MarkItDown would compete directly with Docling. **Monitoring:** Monitor GitHub for "table extraction rewrite" or "row-column layout preservation" PRs.
+2. **Table extraction algorithm changes to row-column preservation** -- Removes core disqualifier for structured data extraction. Use case expands significantly. MarkItDown would compete directly with Docling. **Monitoring:** Monitor GitHub for "table extraction rewrite" or "row-column layout preservation" PRs.
 
-3. **Large-scale production migration from MarkItDown to Docling documented in industry reports** — Would validate that current architecture is unsustainable for complex documents. Recommendation for production shifts further toward alternatives. **Monitoring:** Survey Python/AI developer communities; track tool mention trends on Twitter/X and GitHub.
+3. **Large-scale production migration from MarkItDown to Docling documented in industry reports** -- Would validate that current architecture is unsustainable for complex documents. Recommendation for production shifts further toward alternatives. **Monitoring:** Survey Python/AI developer communities; track tool mention trends on Twitter/X and GitHub.
 
-4. **Performance benchmark on >10MB files shows synchronous bottleneck resolves in new architecture** — Removes batch processing constraint. Use case expands to larger document sets. **Monitoring:** Check GitHub Issue #1276 for "async implementation" PRs or release notes.
+4. **Performance benchmark on >10MB files shows synchronous bottleneck resolves in new architecture** -- Removes batch processing constraint. Use case expands to larger document sets. **Monitoring:** Check GitHub Issue #1276 for "async implementation" PRs or release notes.
 
-5. **New unpatched CVEs discovered in pdfminer.six or other transitive dependencies** — Increases security risk. Recommendation confidence for untrusted-input scenarios decreases further. **Monitoring:** Track CVE databases (NVD, Tenable) and GitHub dependency alerts weekly.
+5. **New unpatched CVEs discovered in pdfminer.six or other transitive dependencies** -- Increases security risk. Recommendation confidence for untrusted-input scenarios decreases further. **Monitoring:** Track CVE databases (NVD, Tenable) and GitHub dependency alerts weekly.
 
-6. **Independent PPTX benchmark shows >90% accuracy parity with Docling** — Invalidates "PPTX quality undocumented" gap. Multi-format support claim gains credibility. **Monitoring:** Request or conduct independent PPTX test suite on 20+ real-world PowerPoint files.
+6. **Independent PPTX benchmark shows >90% accuracy parity with Docling** -- Invalidates "PPTX quality undocumented" gap. Multi-format support claim gains credibility. **Monitoring:** Request or conduct independent PPTX test suite on 20+ real-world PowerPoint files.
 
 ## Vertical-Specific Constraints
 
@@ -97,7 +97,7 @@ MarkItDown is **not** suitable for:
 
 - **DOCX structure preservation is partial.** Merged cells and nested tables are lost or discarded. Do not assume DOCX files convert with structure preservation; Docling significantly outperforms on this format. [MEDIUM confidence, GitHub issues](https://github.com/microsoft/markitdown)
 
-- **Installation simplicity does not equate to operational simplicity.** While pip installation is straightforward, production deployment requires: (1) security patching of pdfminer.six, (2) encoding error handling (15-20% code complexity), (3) exponential backoff for batch retries, (4) fallback routing logic, (5) dependency monitoring and CVE tracking, (6) failure logging and alerting. **Total operational effort: 40-60 engineering hours, 3-5 weeks, $2-5K budget for production deployment with proper vetting.** [MEDIUM confidence — based on synthesis analysis of pdfminer CVE patching, error handling, and fallback mechanism implementation time](internal)
+- **Installation simplicity does not equate to operational simplicity.** While pip installation is straightforward, production deployment requires: (1) security patching of pdfminer.six, (2) encoding error handling (15-20% code complexity), (3) exponential backoff for batch retries, (4) fallback routing logic, (5) dependency monitoring and CVE tracking, (6) failure logging and alerting. **Total operational effort: 40-60 engineering hours, 3-5 weeks, $2-5K budget for production deployment with proper vetting.** [MEDIUM confidence -- based on synthesis analysis of pdfminer CVE patching, error handling, and fallback mechanism implementation time](internal)
 
 - **Wrapper library quality ceiling.** MarkItDown cannot exceed the capabilities of underlying libraries (pdfminer, python-docx, python-pptx). Quality improvements require upstream library advances, not MarkItDown development. [HIGH confidence](internal)
 
@@ -136,7 +136,7 @@ MarkItDown is **not** suitable for:
 
 **When to prefer Marker:** Fast alternative to Docling with reasonable accuracy on complex PDFs. Preserves reading order and sections. Good middle ground between MarkItDown speed and Docling accuracy.
 
-**When to prefer Mistral Document AI or Azure Document Intelligence:** When budget allows and accuracy is critical. Cloud-based solutions offer higher accuracy for complex documents but add latency and cost ($1–5/page for Azure).
+**When to prefer Mistral Document AI or Azure Document Intelligence:** When budget allows and accuracy is critical. Cloud-based solutions offer higher accuracy for complex documents but add latency and cost ($1-5/page for Azure).
 
 **When MarkItDown is the only choice:** Simple internal documents, lightweight preprocessing for RAG pipelines with basic documents, token-constrained LLM consumption where speed is paramount, and where budget/latency constraints rule out alternatives.
 

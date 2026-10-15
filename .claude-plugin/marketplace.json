@@ -1,0 +1,16 @@
+{
+  "name": "brainstorming",
+  "owner": {
+    "name": "nixxet"
+  },
+  "metadata": {
+    "description": "Evidence-backed technical research pipeline for Claude Code."
+  },
+  "plugins": [
+    {
+      "name": "brainstorming",
+      "source": "./",
+      "description": "Evidence-backed technical research pipeline: fast cited answers or a full audited multi-agent dossier."
+    }
+  ]
+}

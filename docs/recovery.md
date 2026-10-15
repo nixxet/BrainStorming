@@ -86,19 +86,6 @@ npm run regenerate-index
 
 Use the dry run first because regeneration may replace hand-crafted summaries.
 
-## Failed Public Export
-
-Symptoms:
-
-- `npm run export:public` exits non-zero.
-- Export reports private artifacts or sensitive file patterns.
-
-Repair:
-
-- Remove the private file from the export source path.
-- Update `.gitignore` if the file should never be tracked.
-- Re-run `npm run export:public`.
-
 ## Secret Detected
 
 Symptoms:
