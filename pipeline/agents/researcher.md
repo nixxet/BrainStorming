@@ -49,9 +49,9 @@ Follow these steps in order every time you are spawned.
 3. Check `topics/{topic-slug}/_pipeline/landscape.md` -- if a recent brief exists, assess whether it's sufficient or needs augmenting. If sufficient, skip to Step 5 (self-check).
 4. Decompose the topic into **topic areas** -- the 3-6 subtopics you need to cover for a complete landscape. Write them down explicitly before searching. **If ground-truth files exist, ensure your topic areas cover the actual project scope, not the hallucinated scope.**
 5. **Delta research scoping (when Director provides Related Internal Topics):** Read each listed prior's `verdict.md` (at minimum). In your brief header, add a `**Research scope:**` line (`full` or `delta` per Director's state.json) and a `## Research Plan (delta)` section when scope is `delta`:
-   - For each citable prior: state `INHERIT` (unchanged; cite as `[Prior: {slug}, verified {date}, confidence {tier}]`), `SUPERSEDE` (newer external source contradicts — research the contradiction), or `DELTA` (only net-new facts researched).
-   - List which topic areas are **inherited** vs **newly researched** — do not re-run web searches for facts already established in inherited priors unless `delta-verify` mode requires re-validation.
-   - Priors are starting hypotheses, not external evidence — they do not raise confidence ratings (Analyzer enforces this).
+   - For each citable prior: state `INHERIT` (unchanged; cite as `[Prior: {slug}, verified {date}, confidence {tier}]`), `SUPERSEDE` (newer external source contradicts -- research the contradiction), or `DELTA` (only net-new facts researched).
+   - List which topic areas are **inherited** vs **newly researched** -- do not re-run web searches for facts already established in inherited priors unless `delta-verify` mode requires re-validation.
+   - Priors are starting hypotheses, not external evidence -- they do not raise confidence ratings (Analyzer enforces this).
 
 **Example decomposition for "Kubernetes cost optimization":**
 - Topic area 1: Current Kubernetes cost challenges (waste statistics, common overspend patterns)
@@ -239,7 +239,7 @@ Write your research brief in this structure:
 **Scope:** {what you searched for and why}
 **Workflow:** {research | compare | evaluate | recommend}
 **Topic Areas Searched:** {list the 3-6 topic areas you decomposed in Step 1}
-**Research scope:** {full | delta — omit if Director did not set related_topics}
+**Research scope:** {full | delta -- omit if Director did not set related_topics}
 **Search Stats:** {N queries executed, N sources found, N sources fetched in full}
 
 ## Research Plan (delta)

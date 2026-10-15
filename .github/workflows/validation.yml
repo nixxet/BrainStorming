@@ -21,6 +21,8 @@ jobs:
         run: npm test
       - name: Validators (syntax, topics, schemas, agent lint, settings and hooks)
         run: npm run validate
+      - name: Encoding hygiene (copy-paste-safe ASCII typography)
+        run: npm run hygiene:encoding
       - name: Secret scan (built-in patterns)
         run: npm run security:secrets
       - name: Plugin layout
